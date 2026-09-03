@@ -104,6 +104,25 @@ sono — movimenti non contabilizzati.
 lo apre senza avvisi di compatibilità e le tabelle sono tabelle modificabili. Il file si
 chiama `Budget mensile - Settembre 2026.docx`.
 
+### I grafici
+
+Word non ha un renderer di immagini lato server, e aggiungere `node-canvas` su Windows
+significa compilare codice nativo. I grafici sono quindi **disegnati con costrutti nativi di
+Word**: tabelle annidate con sfondi colorati e altezze di riga fisse. Il risultato è migliore
+di un'immagine — resta nitido in stampa a qualunque zoom, il testo è testo vero, e chi riceve
+il documento può modificarlo.
+
+- **Budget contro effettivo** — due barre per categoria, blu il budget e arancio l'effettivo.
+- **Distribuzione del budget** — la torta srotolata in una barra unica al 100%, con la
+  legenda completa sotto. Stessi sei colori dell'app più il neutro per «Altro».
+- **Andamento del mese** — barra della spesa per ogni giorno con movimenti, più entrate extra
+  e cumulato.
+
+Colori, grassetti e allineamenti seguono la stessa palette dell'app in versione chiara, che è
+quella giusta sulla carta bianca: importi a destra, differenze negative e sforamenti in
+rosso, righe alternate, intestazioni ripetute quando una tabella cambia pagina, piè di pagina
+con numerazione. Lo stato del budget resta icona **più** etichetta, mai il solo colore.
+
 Lo costruisce il server leggendo il file dei dati (`GET /api/riepilogo?mese=AAAA-MM`), non lo
 stato della pagina. Per questo il pulsante si disabilita quando un salvataggio è in errore:
 il documento non corrisponderebbe a quello che vedi a schermo.
