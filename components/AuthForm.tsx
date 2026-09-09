@@ -108,14 +108,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
   if (attesaEmail) {
     return (
       <div className="rounded-xl border border-hairline bg-surface px-6 py-8 text-center">
-        <p className="text-sm font-medium text-ink">Controlla la posta</p>
+        <p className="text-sm font-semibold tracking-tight text-ink">Controlla la posta</p>
         <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
           Abbiamo inviato un messaggio di conferma a <strong>{email}</strong>. Apri il link
           che trovi dentro, poi torna qui e accedi.
         </p>
         <Link
           href="/accedi"
-          className="mt-4 inline-block text-xs font-medium text-ink underline underline-offset-2"
+          className="mt-4 inline-block text-xs font-semibold text-ink underline underline-offset-2"
         >
           Vai all&apos;accesso
         </Link>
@@ -128,8 +128,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
       onSubmit={submit}
       className="rounded-xl border border-hairline bg-surface px-6 py-7 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
     >
-      <h1 className="text-base font-semibold tracking-tight text-ink">{t.titolo}</h1>
-      <p className="mt-1 text-xs text-ink-secondary">{t.sottotitolo}</p>
+      <h1 className="text-lg font-bold tracking-[-0.04em] text-ink">{t.titolo}</h1>
+      <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">{t.sottotitolo}</p>
 
       <div className="mt-5 space-y-3">
         {mode === "registrazione" && (
@@ -201,7 +201,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
       <p className="mt-4 text-center text-xs text-ink-secondary">
         {t.altroTesto}{" "}
-        <Link href={t.altroLink} className="font-medium text-ink underline underline-offset-2">
+        <Link href={t.altroLink} className="font-semibold text-ink underline underline-offset-2">
           {t.altroInvito}
         </Link>
       </p>

@@ -150,8 +150,8 @@ export default function BudgetPage() {
             />
           </Field>
           <div className="rounded-lg border border-hairline bg-sunken px-3 py-2">
-            <p className="text-xs text-ink-secondary">Entrate totali del mese</p>
-            <p className="tnum mt-0.5 text-lg font-semibold text-ink">{formatEur(totals.income)}</p>
+            <p className="label text-ink-secondary">Entrate totali del mese</p>
+            <p className="tnum mt-1 text-lg font-bold tracking-[-0.03em] text-ink">{formatEur(totals.income)}</p>
             <p className="mt-0.5 text-[11px] text-ink-muted">
               {extrasTotal > 0
                 ? `${formatEur(totals.baseIncome)} fisse + ${formatEur(extrasTotal)} extra`
@@ -159,13 +159,13 @@ export default function BudgetPage() {
             </p>
           </div>
           <div className="rounded-lg border border-hairline bg-sunken px-3 py-2">
-            <p className="text-xs text-ink-secondary">Budget totale pianificato</p>
-            <p className="tnum mt-0.5 text-lg font-semibold text-ink">{formatEur(totals.budget)}</p>
+            <p className="label text-ink-secondary">Budget totale pianificato</p>
+            <p className="tnum mt-1 text-lg font-bold tracking-[-0.03em] text-ink">{formatEur(totals.budget)}</p>
           </div>
           <div className="rounded-lg border border-hairline bg-sunken px-3 py-2">
-            <p className="text-xs text-ink-secondary">Non allocato</p>
+            <p className="label text-ink-secondary">Non allocato</p>
             <p
-              className="tnum mt-0.5 text-lg font-semibold"
+              className="tnum mt-1 text-lg font-bold tracking-[-0.03em]"
               style={{
                 color: plannedLeftover < 0 ? "var(--critical-text)" : "var(--good-text)",
               }}
@@ -263,7 +263,7 @@ export default function BudgetPage() {
             <ul className="divide-y divide-hairline">
               {extras.map((e) => (
                 <li key={e.id} className="flex flex-wrap items-center gap-3 py-2">
-                  <span className="tnum w-24 shrink-0 text-xs text-ink-secondary">
+                  <span className="tnum w-[6.5rem] shrink-0 text-xs text-ink-secondary">
                     {formatDate(e.date)}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-sm text-ink">
@@ -284,8 +284,8 @@ export default function BudgetPage() {
                 </li>
               ))}
               <li className="flex items-center gap-3 border-t-2 border-hairline-strong py-2">
-                <span className="flex-1 text-sm font-medium text-ink">Totale extra</span>
-                <span className="tnum text-sm font-medium" style={{ color: "var(--good-text)" }}>
+                <span className="flex-1 text-sm font-semibold text-ink">Totale extra</span>
+                <span className="tnum text-sm font-semibold" style={{ color: "var(--good-text)" }}>
                   +{formatEur(extrasTotal)}
                 </span>
                 <span className="w-[4.5rem]" />

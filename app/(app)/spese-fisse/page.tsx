@@ -5,7 +5,16 @@ import { useStore } from "@/lib/store";
 import { useMonth } from "@/lib/month";
 import { activeCategories, transactionsOfMonth } from "@/lib/calc";
 import { formatEur, formatMonth, parseAmount } from "@/lib/format";
-import { Button, Card, ConfirmDialog, EmptyState, Field, Input, Select } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  Field,
+  Input,
+  Select,
+} from "@/components/ui";
 import type { FixedExpense } from "@/lib/types";
 
 export default function FixedExpensesPage() {
@@ -120,10 +129,10 @@ export default function FixedExpensesPage() {
               return (
                 <div key={category.id}>
                   <div className="flex items-baseline justify-between border-b border-hairline pb-1.5">
-                    <h3 className="text-xs font-semibold tracking-tight text-ink">
-                      {category.name}
-                    </h3>
-                    <span className="tnum text-xs text-ink-secondary">{formatEur(total)}</span>
+                    <h3 className="label text-ink">{category.name}</h3>
+                    <span className="tnum text-xs font-semibold text-ink-secondary">
+                      {formatEur(total)}
+                    </span>
                   </div>
                   <ul className="divide-y divide-hairline">
                     {items.map((fx) => (
@@ -147,9 +156,7 @@ export default function FixedExpensesPage() {
                         </label>
                         {fx.note && <span className="text-xs text-ink-muted">{fx.note}</span>}
                         {alreadyGenerated.has(fx.id) && (
-                          <span className="rounded border border-hairline-strong px-1 py-px text-[10px] text-ink-muted">
-                            registrata in {formatMonth(month)}
-                          </span>
+                          <Badge>registrata in {formatMonth(month)}</Badge>
                         )}
                         <span className="ml-auto flex items-center gap-2">
                           <Input

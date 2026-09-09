@@ -21,7 +21,7 @@ export function Legend({ items }: { items: { label: string; color: string }[] })
   return (
     <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
       {items.map((it) => (
-        <li key={it.label} className="flex items-center gap-1.5 text-xs text-ink-secondary">
+        <li key={it.label} className="label flex items-center gap-1.5 text-ink-secondary">
           <span
             aria-hidden
             className="block h-2.5 w-2.5 rounded-[2px]"
@@ -85,7 +85,7 @@ export function BudgetVsActualChart({ rows }: { rows: CategorySummaryRow[] }) {
               onBlur={() => setHovered(null)}
               tabIndex={0}
               className={cx(
-                "grid grid-cols-[minmax(5.5rem,7.5rem)_1fr] items-center gap-3 rounded-md px-1.5 py-1.5 outline-none transition-colors sm:grid-cols-[9rem_1fr]",
+                "grid grid-cols-[minmax(6.5rem,9rem)_1fr] items-center gap-3 rounded-md px-1.5 py-1.5 outline-none transition-colors sm:grid-cols-[11rem_1fr]",
                 isHovered && "bg-sunken",
               )}
             >
@@ -277,9 +277,11 @@ export function BudgetDistribution({ rows }: { rows: CategorySummaryRow[] }) {
           y={hovered ? CENTER - 14 : CENTER - 10}
           textAnchor="middle"
           fill="var(--ink-secondary)"
-          fontSize={11}
+          fontSize={10}
+          fontWeight={600}
+          letterSpacing="0.085em"
         >
-          {hovered ? hovered.label : "Budget totale"}
+          {hovered ? hovered.label.toUpperCase() : "BUDGET TOTALE"}
         </text>
         <text
           x={CENTER}
@@ -287,7 +289,8 @@ export function BudgetDistribution({ rows }: { rows: CategorySummaryRow[] }) {
           textAnchor="middle"
           fill="var(--ink)"
           fontSize={19}
-          fontWeight={600}
+          fontWeight={700}
+          letterSpacing="-0.04em"
         >
           {formatEurShort(hovered ? hovered.amount : total)}
         </text>
@@ -376,7 +379,7 @@ export function IncomeVsSpendChart({ points }: { points: Point[] }) {
   const [active, setActive] = useState<number | null>(null);
 
   const height = 220;
-  const pad = { top: 12, right: 12, bottom: 26, left: 54 };
+  const pad = { top: 12, right: 24, bottom: 26, left: 64 };
   const innerW = Math.max(10, width - pad.left - pad.right);
   const innerH = height - pad.top - pad.bottom;
 
@@ -489,7 +492,7 @@ export function IncomeVsSpendChart({ points }: { points: Point[] }) {
         )}
         {hit && (
           <div className="tnum pointer-events-none mt-1 text-xs text-ink-secondary">
-            <strong className="font-medium text-ink">{formatMonthShort(hit.month)}</strong> · Entrate{" "}
+            <strong className="font-semibold text-ink">{formatMonthShort(hit.month)}</strong> · Entrate{" "}
             {formatEur(hit.income)} · Uscite {formatEur(hit.spent)} · Risparmio{" "}
             <span style={{ color: hit.saving < 0 ? "var(--critical-text)" : "var(--good-text)" }}>
               {formatSignedEur(hit.saving)}
@@ -517,7 +520,7 @@ export function DailyFlowChart({
   const [active, setActive] = useState<number | null>(null);
 
   const height = 240;
-  const pad = { top: 12, right: 12, bottom: 28, left: 58 };
+  const pad = { top: 12, right: 12, bottom: 28, left: 66 };
   const innerW = Math.max(10, width - pad.left - pad.right);
   const innerH = height - pad.top - pad.bottom;
 
@@ -705,7 +708,7 @@ export function DailyFlowChart({
         <p className="tnum mt-1 h-4 text-xs text-ink-secondary">
           {hit ? (
             <>
-              <strong className="font-medium text-ink">{formatDateShort(hit.date)}</strong> · Speso
+              <strong className="font-semibold text-ink">{formatDateShort(hit.date)}</strong> · Speso
               nel giorno {formatEur(hit.spent)}
               {hit.earned > 0 && (
                 <> · Entrata extra {formatEur(hit.earned)}</>

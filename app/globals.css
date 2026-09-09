@@ -121,7 +121,13 @@
   --color-critical: var(--critical);
   --color-good-text: var(--good-text);
   --color-critical-text: var(--critical-text);
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Un carattere solo, quello del logo. Le due voci puntano allo stesso
+     stack di proposito: qui "sans" e "mono" non sono due voci diverse, e
+     l'elemento <code> deve continuare a somigliare al resto del testo. */
+  --font-sans: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo,
+    Consolas, monospace;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo,
+    Consolas, monospace;
 }
 
 html,
@@ -130,9 +136,40 @@ body {
   color: var(--ink);
 }
 
+/*
+  Il peso del logo, 500 (Medium), e' il peso del testo normale: e' da li' che
+  parte tutta la scala. Sopra restano 600 per i titoli e 700 per i numeri
+  grandi; 400 non si usa, perche' sotto al Medium il monospazio si sfilaccia.
+
+  Le due correzioni che seguono servono solo perche' il carattere e' a passo
+  fisso:
+  - il monospazio e' largo, e senza un filo di crenatura negativa i paragrafi
+    lunghi diventano un muro; -0.012em li riavvicina senza toccare le cifre;
+  - "calt" spegne le legature da codice (->, !=, ...), che in un'interfaccia
+    non servono e nei nomi delle categorie scritti da chi usa l'app
+    sorprenderebbero.
+*/
 body {
   font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  font-feature-settings: "calt" 0;
   -webkit-font-smoothing: antialiased;
+}
+
+/* I titoli si stringono di piu' del testo: a passo fisso, una riga di titolo
+   larga si legge come un'insegna invece che come un titolo.
+
+   Dentro @layer base perche' resti un valore di partenza: una `tracking-*`
+   scritta sul singolo titolo deve poter vincere. Fuori dai layer la vincerebbe
+   questa, qualunque cosa dica la classe. */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.03em;
+  }
 }
 
 :where(a, button, input, select, textarea):focus-visible {
@@ -149,6 +186,54 @@ body {
 .scroll-x {
   overflow-x: auto;
   overscroll-behavior-x: contain;
+}
+
+/*
+  L'etichetta minuta: intestazioni di colonna, etichette dei campi, targhette
+  dei riquadri di sintesi. Maiuscoletto spaziato — la forma che il monospazio
+  regge meglio nei corpi piccoli, dove le minuscole a passo fisso si
+  confonderebbero con il dato che stanno etichettando.
+
+  A differenza del testo corrente qui la crenatura e' positiva: in maiuscolo e
+  a 11px le lettere hanno bisogno di staccarsi, non di avvicinarsi.
+*/
+@layer components {
+  .label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.45;
+    text-transform: uppercase;
+    letter-spacing: 0.085em;
+  }
+}
+
+/*
+  Il marchio. Le due immagini stanno entrambe nel documento e a decidere quale
+  si vede e' il CSS, non JavaScript: cosi' il logo giusto e' gia' al suo posto
+  al primo paint, come il tema. display:none toglie l'altra anche dall'albero
+  di accessibilita', quindi il testo alternativo viene letto una volta sola.
+*/
+@layer components {
+  .logo-on-dark {
+    display: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .logo-on-light {
+      display: none;
+    }
+    :root:not([data-theme="light"]) .logo-on-dark {
+      display: block;
+    }
+  }
+
+  :root[data-theme="dark"] .logo-on-light {
+    display: none;
+  }
+
+  :root[data-theme="dark"] .logo-on-dark {
+    display: block;
+  }
 }
 
 /*

@@ -1,9 +1,44 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
+}
+
+/**
+ * Il marchio, in una delle due versioni a seconda del fondo. Entrambe stanno
+ * nel documento e a scegliere e' il CSS (.logo-on-light / .logo-on-dark in
+ * globals.css): il logo giusto e' gia' quello dipinto al primo paint, senza
+ * l'attimo di quello sbagliato che darebbe una scelta fatta in JavaScript.
+ *
+ * width e height sono le proporzioni del file, non la misura a schermo:
+ * servono a Next per riservare lo spazio. L'altezza vera la impone chi usa il
+ * componente, con una classe tipo `h-5`; la larghezza segue da sola.
+ */
+export function Logo({
+  className,
+  priority = false,
+}: {
+  className?: string;
+  priority?: boolean;
+}) {
+  const size = { width: 2000, height: 426, priority, alt: "mymoney" } as const;
+  return (
+    <>
+      <Image
+        {...size}
+        src="/mymoney-logo-dark.png"
+        className={cx("logo-on-light w-auto", className)}
+      />
+      <Image
+        {...size}
+        src="/mymoney-logo-white.png"
+        className={cx("logo-on-dark w-auto", className)}
+      />
+    </>
+  );
 }
 
 export function Card({
@@ -31,7 +66,9 @@ export function Card({
       {(title || action) && (
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-hairline px-4 py-3 sm:px-5">
           <div className="min-w-0">
-            {title && <h2 className="text-sm font-semibold tracking-tight text-ink">{title}</h2>}
+            {title && (
+              <h2 className="text-sm font-semibold tracking-tight text-ink">{title}</h2>
+            )}
             {description && (
               <p className="mt-0.5 text-xs leading-relaxed text-ink-secondary">{description}</p>
             )}
@@ -73,7 +110,7 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 const buttonBase =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium tracking-[-0.02em] transition-colors disabled:cursor-not-allowed";
 
 const buttonVariants = {
   primary: "bg-ink text-page hover:opacity-90",
@@ -240,7 +277,7 @@ export function Field({
 }) {
   return (
     <label className={cx("block [&>input]:w-full [&>select]:w-full", className)}>
-      <span className="mb-1 block text-xs font-medium text-ink-secondary">{label}</span>
+      <span className="label mb-1 block text-ink-secondary">{label}</span>
       {children}
       {hint && <span className="mt-1 block text-[11px] text-ink-muted">{hint}</span>}
     </label>
@@ -291,11 +328,30 @@ export function PageSkeleton() {
   );
 }
 
+/**
+ * La targhetta che qualifica una riga: "fissa", "accantonamento", "registrata
+ * in Settembre". Non e' testo corrente ma una marca, e a passo fisso il
+ * maiuscoletto e' l'unico modo per dirlo senza cambiare carattere.
+ *
+ * Stava scritta uguale in quattro punti: da qui in poi la forma e' una sola.
+ */
+export function Badge({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-block rounded border border-hairline-strong px-1.5 py-px text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-ink-muted">
+      {children}
+    </span>
+  );
+}
+
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="rounded-lg border border-dashed border-hairline-strong px-4 py-10 text-center">
-      <p className="text-sm font-medium text-ink">{title}</p>
-      {hint && <p className="mx-auto mt-1 max-w-md text-xs text-ink-secondary">{hint}</p>}
+      <p className="text-sm font-semibold tracking-tight text-ink">{title}</p>
+      {hint && (
+        <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-ink-secondary">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

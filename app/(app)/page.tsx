@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { useMonth } from "@/lib/month";
 import { categorySummary, monthTotals, transactionsOfMonth, categoryMap } from "@/lib/calc";
 import { formatEur, formatMonth, formatDate, formatPct } from "@/lib/format";
-import { Button, Card, EmptyState } from "@/components/ui";
+import { Badge, Button, Card, EmptyState } from "@/components/ui";
 import { BudgetDistribution, BudgetVsActualChart } from "@/components/charts";
 import { CategorySummaryTable } from "@/components/CategorySummaryTable";
 
@@ -41,11 +41,11 @@ function StatTile({
     tone === "good" ? "var(--good-text)" : tone === "critical" ? "var(--critical-text)" : "var(--ink)";
   return (
     <div className="rounded-xl border border-hairline bg-surface px-4 py-3.5">
-      <p className="text-xs text-ink-secondary">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight" style={{ color }}>
+      <p className="label text-ink-secondary">{label}</p>
+      <p className="tnum mt-1 text-2xl font-bold tracking-[-0.04em]" style={{ color }}>
         {value}
       </p>
-      {hint && <p className="mt-0.5 text-[11px] text-ink-muted">{hint}</p>}
+      {hint && <p className="mt-0.5 text-[11px] leading-relaxed text-ink-muted">{hint}</p>}
     </div>
   );
 }
@@ -199,7 +199,7 @@ export default function DashboardPage() {
         action={
           <Link
             href="/transazioni"
-            className="text-xs font-medium text-ink-secondary underline underline-offset-2 hover:text-ink"
+            className="text-xs font-semibold text-ink-secondary underline underline-offset-2 hover:text-ink"
           >
             Vedi tutti
           </Link>
@@ -223,9 +223,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {t.excluded && (
-                    <span className="rounded border border-hairline-strong px-1 py-px text-[10px] text-ink-muted">
-                      non contabilizzata
-                    </span>
+                    <Badge>non contabilizzata</Badge>
                   )}
                   <span className="tnum text-sm text-ink">{formatEur(t.amount)}</span>
                 </div>

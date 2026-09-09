@@ -223,7 +223,7 @@ export default function SettingsPage() {
               />
               <Select
                 value={c.kind}
-                className="h-8 w-40 text-xs"
+                className="h-8 w-44 text-xs"
                 onChange={(e) =>
                   updateCategory(c.id, { kind: e.target.value as "expense" | "saving" })
                 }
@@ -275,7 +275,7 @@ export default function SettingsPage() {
               }}
             />
           </Field>
-          <Field label="Tipo" className="w-44">
+          <Field label="Tipo" className="w-48">
             <Select
               value={newKind}
               onChange={(e) => setNewKind(e.target.value as "expense" | "saving")}
@@ -360,7 +360,7 @@ export default function SettingsPage() {
           </p>
         )}
 
-        <p className="mt-4 text-xs font-medium text-ink-secondary">Email</p>
+        <p className="label mt-4 text-ink-secondary">Email</p>
         <p className="mt-1 break-all rounded-lg border border-hairline bg-sunken px-3 py-2 text-xs text-ink">
           {account.email || "email non disponibile"}
         </p>

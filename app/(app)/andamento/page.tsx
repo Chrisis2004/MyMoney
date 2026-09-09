@@ -45,9 +45,9 @@ export default function TrendPage() {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-xl border border-hairline bg-surface px-4 py-3.5">
-          <p className="text-xs text-ink-secondary">Risparmio cumulato</p>
+          <p className="label text-ink-secondary">Risparmio cumulato</p>
           <p
-            className="mt-1 text-2xl font-semibold tracking-tight"
+            className="tnum mt-1 text-2xl font-bold tracking-[-0.04em]"
             style={{ color: cumulative < 0 ? "var(--critical-text)" : "var(--good-text)" }}
           >
             {formatEur(cumulative)}
@@ -55,22 +55,22 @@ export default function TrendPage() {
           <p className="mt-0.5 text-[11px] text-ink-muted">Su {points.length} mesi</p>
         </div>
         <div className="rounded-xl border border-hairline bg-surface px-4 py-3.5">
-          <p className="text-xs text-ink-secondary">Tasso medio</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+          <p className="label text-ink-secondary">Tasso medio</p>
+          <p className="tnum mt-1 text-2xl font-bold tracking-[-0.04em] text-ink">
             {formatPct(avgRate)}
           </p>
           <p className="mt-0.5 text-[11px] text-ink-muted">Delle entrate</p>
         </div>
         <div className="rounded-xl border border-hairline bg-surface px-4 py-3.5">
-          <p className="text-xs text-ink-secondary">Mese migliore</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+          <p className="label text-ink-secondary">Mese migliore</p>
+          <p className="tnum mt-1 text-2xl font-bold tracking-[-0.04em] text-ink">
             {formatEur(best.saving)}
           </p>
           <p className="mt-0.5 text-[11px] text-ink-muted">{formatMonth(best.month)}</p>
         </div>
         <div className="rounded-xl border border-hairline bg-surface px-4 py-3.5">
-          <p className="text-xs text-ink-secondary">Mese peggiore</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+          <p className="label text-ink-secondary">Mese peggiore</p>
+          <p className="tnum mt-1 text-2xl font-bold tracking-[-0.04em] text-ink">
             {formatEur(worst.saving)}
           </p>
           <p className="mt-0.5 text-[11px] text-ink-muted">{formatMonth(worst.month)}</p>
@@ -93,20 +93,20 @@ export default function TrendPage() {
 
       <Card title="Tabella" bodyClassName="px-0 sm:px-0">
         <div className="scroll-x px-4 sm:px-5">
-          <table className="w-full min-w-[34rem] border-collapse text-sm">
+          <table className="w-full min-w-[42rem] border-collapse text-sm">
             <thead>
-              <tr className="border-b border-hairline text-left text-xs font-medium text-ink-secondary">
-                <th scope="col" className="py-2 pr-3 font-medium">Mese</th>
-                <th scope="col" className="py-2 pr-3 text-right font-medium">Entrate</th>
-                <th scope="col" className="py-2 pr-3 text-right font-medium">Uscite</th>
-                <th scope="col" className="py-2 pr-3 text-right font-medium">Risparmio</th>
-                <th scope="col" className="py-2 text-right font-medium">Tasso</th>
+              <tr className="label border-b border-hairline text-left text-ink-secondary">
+                <th scope="col" className="py-2 pr-3">Mese</th>
+                <th scope="col" className="py-2 pr-3 text-right">Entrate</th>
+                <th scope="col" className="py-2 pr-3 text-right">Uscite</th>
+                <th scope="col" className="py-2 pr-3 text-right">Risparmio</th>
+                <th scope="col" className="py-2 text-right">Tasso</th>
               </tr>
             </thead>
             <tbody>
               {[...points].reverse().map((p) => (
                 <tr key={p.month} className="border-b border-hairline last:border-0">
-                  <th scope="row" className="py-2 pr-3 text-left font-normal text-ink">
+                  <th scope="row" className="py-2 pr-3 text-left font-medium text-ink">
                     {formatMonth(p.month)}
                   </th>
                   <td className="tnum py-2 pr-3 text-right text-ink-secondary">

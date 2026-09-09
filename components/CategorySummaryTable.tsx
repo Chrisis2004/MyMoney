@@ -3,7 +3,7 @@
 import type { CategorySummaryRow } from "@/lib/types";
 import { formatEur, formatSignedEur } from "@/lib/format";
 import { ConsumedBar } from "./charts";
-import { StatusPill, budgetState } from "./ui";
+import { Badge, StatusPill, budgetState } from "./ui";
 
 export function CategorySummaryTable({ rows }: { rows: CategorySummaryRow[] }) {
   const totals = rows.reduce(
@@ -14,26 +14,26 @@ export function CategorySummaryTable({ rows }: { rows: CategorySummaryRow[] }) {
 
   return (
     <div className="scroll-x">
-      <table className="w-full min-w-[46rem] border-collapse text-sm">
+      <table className="w-full min-w-[54rem] border-collapse text-sm">
         <caption className="sr-only">Riepilogo per categoria del mese selezionato</caption>
         <thead>
-          <tr className="border-b border-hairline text-left text-xs font-medium text-ink-secondary">
-            <th scope="col" className="py-2 pr-3 font-medium">
+          <tr className="label border-b border-hairline text-left text-ink-secondary">
+            <th scope="col" className="py-2 pr-3">
               Categoria
             </th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">
+            <th scope="col" className="py-2 pr-3 text-right">
               Budget
             </th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">
+            <th scope="col" className="py-2 pr-3 text-right">
               Effettivo
             </th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">
+            <th scope="col" className="py-2 pr-3 text-right">
               Differenza
             </th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">
+            <th scope="col" className="py-2 pr-3 text-right">
               Consumato
             </th>
-            <th scope="col" className="py-2 font-medium">
+            <th scope="col" className="py-2">
               Stato
             </th>
           </tr>
@@ -41,11 +41,11 @@ export function CategorySummaryTable({ rows }: { rows: CategorySummaryRow[] }) {
         <tbody>
           {rows.map((row) => (
             <tr key={row.category.id} className="border-b border-hairline last:border-0">
-              <th scope="row" className="py-2 pr-3 text-left font-normal text-ink">
+              <th scope="row" className="py-2 pr-3 text-left font-medium text-ink">
                 {row.category.name}
                 {row.category.kind === "saving" && (
-                  <span className="ml-2 rounded border border-hairline-strong px-1 py-px text-[10px] text-ink-muted">
-                    accantonamento
+                  <span className="ml-2">
+                    <Badge>accantonamento</Badge>
                   </span>
                 )}
               </th>
@@ -71,7 +71,7 @@ export function CategorySummaryTable({ rows }: { rows: CategorySummaryRow[] }) {
           ))}
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-hairline-strong font-medium">
+          <tr className="border-t-2 border-hairline-strong font-semibold">
             <th scope="row" className="py-2 pr-3 text-left text-ink">
               Totale
             </th>

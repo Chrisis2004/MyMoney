@@ -5,7 +5,16 @@ import { useStore } from "@/lib/store";
 import { useMonth } from "@/lib/month";
 import { activeCategories, categoryMap, splitByAccounting, transactionsOfMonth } from "@/lib/calc";
 import { dayInMonth, formatDate, formatEur, formatMonth, monthOf, parseAmount } from "@/lib/format";
-import { Button, Card, ConfirmDialog, EmptyState, Field, Input, Select } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  Field,
+  Input,
+  Select,
+} from "@/components/ui";
 import type { Category, Transaction } from "@/lib/types";
 
 type Draft = {
@@ -33,13 +42,13 @@ function emptyDraft(month: string, categoryId: string): Draft {
 function TableHead() {
   return (
     <thead>
-      <tr className="border-b border-hairline text-left text-xs font-medium text-ink-secondary">
-        <th scope="col" className="py-2 pr-3 font-medium">Data</th>
-        <th scope="col" className="py-2 pr-3 font-medium">Descrizione</th>
-        <th scope="col" className="py-2 pr-3 font-medium">Categoria</th>
-        <th scope="col" className="py-2 pr-3 text-right font-medium">Importo</th>
-        <th scope="col" className="py-2 pr-3 font-medium">Note</th>
-        <th scope="col" className="py-2 font-medium" />
+      <tr className="label border-b border-hairline text-left text-ink-secondary">
+        <th scope="col" className="py-2 pr-3">Data</th>
+        <th scope="col" className="py-2 pr-3">Descrizione</th>
+        <th scope="col" className="py-2 pr-3">Categoria</th>
+        <th scope="col" className="py-2 pr-3 text-right">Importo</th>
+        <th scope="col" className="py-2 pr-3">Note</th>
+        <th scope="col" className="py-2" />
       </tr>
     </thead>
   );
@@ -138,8 +147,8 @@ function TransactionRows({
             <td className="py-2 pr-3 text-ink">
               {t.description}
               {t.fixedExpenseId && (
-                <span className="ml-2 rounded border border-hairline-strong px-1 py-px text-[10px] text-ink-muted">
-                  fissa
+                <span className="ml-2">
+                  <Badge>fissa</Badge>
                 </span>
               )}
             </td>
@@ -391,7 +400,7 @@ export default function TransactionsPage() {
         title={`Movimenti di ${formatMonth(month)}`}
         description={`${counted.length} su ${monthTx.length - monthExcludedCount} · totale filtrato ${formatEur(countedTotal)}`}
         action={
-          <div className="flex flex-wrap gap-2 [&>*]:w-40">
+          <div className="flex flex-wrap gap-2 [&>*]:w-48">
             <Input
               value={query}
               placeholder="Cerca…"
@@ -423,7 +432,7 @@ export default function TransactionsPage() {
           </div>
         ) : (
           <div className="scroll-x px-4 sm:px-5">
-            <table className="w-full min-w-[48rem] border-collapse text-sm">
+            <table className="w-full min-w-[56rem] border-collapse text-sm">
               <TableHead />
               <tbody>
                 <TransactionRows items={counted} {...rowProps} />
@@ -448,13 +457,13 @@ export default function TransactionsPage() {
             </div>
           ) : (
             <div className="scroll-x px-4 sm:px-5">
-              <table className="w-full min-w-[48rem] border-collapse text-sm">
+              <table className="w-full min-w-[56rem] border-collapse text-sm">
                 <TableHead />
                 <tbody>
                   <TransactionRows items={excluded} {...rowProps} />
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-hairline-strong font-medium">
+                  <tr className="border-t-2 border-hairline-strong font-semibold">
                     <td className="py-2 pr-3 text-ink" colSpan={3}>
                       Totale
                     </td>

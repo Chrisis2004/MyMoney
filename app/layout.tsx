@@ -1,5 +1,19 @@
 import type { Metadata, Viewport } from "next";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+
+/**
+ * Il carattere del logo, esteso a tutta l'app. E' la variabile font di Google:
+ * senza `weight` arriva l'intero asse dei pesi, cosi' il 500 del corpo del
+ * testo e i 600/700 dei titoli e dei numeri escono tutti dallo stesso file,
+ * senza scaricarne uno per peso. Next lo ospita in proprio: nessuna chiamata
+ * a Google dal browser di chi usa l'app.
+ */
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  variable: "--font-jetbrains-mono",
+});
 
 export const metadata: Metadata = {
   title: "mymoney",
@@ -31,7 +45,7 @@ try {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it" suppressHydrationWarning>
+    <html lang="it" className={jetBrainsMono.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>

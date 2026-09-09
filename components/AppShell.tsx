@@ -9,7 +9,7 @@ import { iniziali, nomeCompleto } from "@/lib/account";
 import { createClient } from "@/lib/supabase/client";
 import { useMonth } from "@/lib/month";
 import { addMonths, formatMonth } from "@/lib/format";
-import { Button, PageSkeleton, cx } from "./ui";
+import { Button, Logo, PageSkeleton, cx } from "./ui";
 
 const NAV = [
   { href: "/", label: "Riepilogo" },
@@ -97,7 +97,7 @@ function AccountChip() {
     <span className="flex items-center gap-2" title={account.email}>
       <span
         aria-hidden
-        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] font-semibold tracking-wide text-page"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] font-bold tracking-[0.02em] text-page"
       >
         {iniziali(account)}
       </span>
@@ -153,10 +153,8 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
       href={href}
       aria-current={active ? "page" : undefined}
       className={cx(
-        "relative inline-flex h-8 items-center whitespace-nowrap rounded-lg px-3 text-sm transition-colors",
-        active
-          ? "bg-ink font-medium text-page"
-          : "text-ink-secondary hover:bg-sunken hover:text-ink",
+        "label relative inline-flex h-8 items-center whitespace-nowrap rounded-lg px-3 transition-colors",
+        active ? "bg-ink text-page" : "text-ink-secondary hover:bg-sunken hover:text-ink",
       )}
     >
       {label}
@@ -178,7 +176,7 @@ function MonthNav() {
       >
         <span aria-hidden>←</span>
       </Button>
-      <span className="min-w-[8.5rem] text-center text-sm font-medium text-ink">
+      <span className="tnum min-w-[9.5rem] text-center text-sm font-medium text-ink">
         {formatMonth(month)}
       </span>
       <Button
@@ -210,7 +208,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-7">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-base font-semibold tracking-tight text-ink">mymoney</h1>
+          <h1 className="flex items-center">
+            <Logo className="h-[1.125rem]" priority />
+          </h1>
           <MonthNav />
         </div>
         <div className="flex items-center gap-3">
