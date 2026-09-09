@@ -700,9 +700,9 @@ export async function buildMonthReport(data: AppData, month: string): Promise<Bu
   }
 
   const doc = new Document({
-    creator: "Gestione risparmio",
+    creator: "mymoney",
     title: `Budget mensile — ${formatMonth(month)}`,
-    description: "Riepilogo mensile generato dall'app Gestione risparmio.",
+    description: "Riepilogo mensile generato da mymoney.",
     styles: { default: { document: { run: { font: "Calibri", size: 19, color: INK } } } },
     sections: [
       {

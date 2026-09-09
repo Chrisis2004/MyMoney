@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
+import { useAccount } from "@/lib/session";
 import { activeCategories } from "@/lib/calc";
 import { formatDate, formatEur, parseAmount } from "@/lib/format";
 import { Button, Card, ConfirmDialog, Field, Input, Select } from "@/components/ui";
@@ -50,7 +51,6 @@ function parseDate(raw: string) {
 export default function SettingsPage() {
   const {
     data,
-    account,
     savedAt,
     saveStatus,
     reload,
@@ -63,6 +63,7 @@ export default function SettingsPage() {
     clearAll,
   } = useStore();
 
+  const { account, salvaNome } = useAccount();
   const categories = useMemo(() => activeCategories(data), [data]);
   const archived = data.categories.filter((c) => c.archived);
   const [ricarico, setRicarico] = useState(false);
@@ -70,6 +71,28 @@ export default function SettingsPage() {
     setRicarico(true);
     await reload();
     setRicarico(false);
+  };
+
+  const [nome, setNome] = useState(account.nome);
+  const [cognome, setCognome] = useState(account.cognome);
+  const [salvoNome, setSalvoNome] = useState(false);
+  const [esitoNome, setEsitoNome] = useState<string | null>(null);
+  const nomeCambiato =
+    nome.trim() !== account.nome || cognome.trim() !== account.cognome;
+
+  const confermaNome = async () => {
+    setSalvoNome(true);
+    setEsitoNome(null);
+    try {
+      await salvaNome(nome, cognome);
+      setEsitoNome("Fatto: il nome è aggiornato.");
+    } catch (err) {
+      setEsitoNome(
+        `Non riesco a salvare il nome: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      setSalvoNome(false);
+    }
   };
 
   const [newCat, setNewCat] = useState("");
@@ -90,7 +113,7 @@ export default function SettingsPage() {
 
   const exportJson = () =>
     download(
-      `gestione-risparmio-${new Date().toISOString().slice(0, 10)}.json`,
+      `mymoney-${new Date().toISOString().slice(0, 10)}.json`,
       JSON.stringify(data, null, 2),
       "application/json",
     );
@@ -298,15 +321,48 @@ export default function SettingsPage() {
 
       <Card
         title="Account"
-        description="I dati stanno su Supabase e sono legati a questo indirizzo."
+        description="Nome e cognome compaiono in alto a destra. I dati stanno su Supabase, legati all'indirizzo qui sotto."
         action={
           <Button size="sm" onClick={ricarica} loading={ricarico}>
             Ricarica dal database
           </Button>
         }
       >
-        <p className="break-all rounded-lg border border-hairline bg-sunken px-3 py-2 text-xs text-ink">
-          {account ?? "account non disponibile"}
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Nome" className="w-44">
+            <Input
+              autoComplete="given-name"
+              value={nome}
+              disabled={salvoNome}
+              onChange={(e) => setNome(e.target.value)}
+            />
+          </Field>
+          <Field label="Cognome" className="w-44">
+            <Input
+              autoComplete="family-name"
+              value={cognome}
+              disabled={salvoNome}
+              onChange={(e) => setCognome(e.target.value)}
+            />
+          </Field>
+          <Button
+            variant="primary"
+            onClick={confermaNome}
+            loading={salvoNome}
+            disabled={!nomeCambiato}
+          >
+            Salva
+          </Button>
+        </div>
+        {esitoNome && (
+          <p role="status" className="mt-2 text-xs text-ink-secondary">
+            {esitoNome}
+          </p>
+        )}
+
+        <p className="mt-4 text-xs font-medium text-ink-secondary">Email</p>
+        <p className="mt-1 break-all rounded-lg border border-hairline bg-sunken px-3 py-2 text-xs text-ink">
+          {account.email || "email non disponibile"}
         </p>
         <p className="mt-2 text-xs text-ink-secondary">
           {saveStatus === "error"

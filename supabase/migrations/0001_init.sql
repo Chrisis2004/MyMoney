@@ -1,4 +1,4 @@
--- Gestione risparmio - schema iniziale
+-- mymoney - schema iniziale
 -- Da eseguire una volta nell'SQL Editor del progetto Supabase.
 --
 -- Impianto: ogni riga appartiene a un utente (user_id) e le Row Level Security

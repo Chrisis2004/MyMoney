@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { AuthForm } from "@/components/AuthForm";
 
-export const metadata = { title: "Registrazione - Gestione risparmio" };
+export const metadata = { title: "Registrazione - mymoney" };
 
 export default function RegistrazionePage() {
   return (

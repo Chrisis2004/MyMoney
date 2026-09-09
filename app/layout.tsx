@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Gestione risparmio",
+  title: "mymoney",
   description: "Budget mensile, transazioni, spese fisse e andamento del risparmio.",
 };
 
