@@ -4,8 +4,8 @@ import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { activeCategories } from "@/lib/calc";
 import { formatDate, formatEur, parseAmount } from "@/lib/format";
-import { Button, Card, Field, Input, Select } from "@/components/ui";
-import type { AppData, Transaction } from "@/lib/types";
+import { Button, Card, ConfirmDialog, Field, Input, Select } from "@/components/ui";
+import type { AppData, Category, Transaction } from "@/lib/types";
 
 function download(filename: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -60,7 +60,6 @@ export default function SettingsPage() {
     setDefaultIncome,
     addTransactions,
     replaceAll,
-    resetToSeed,
     clearAll,
   } = useStore();
 
@@ -70,9 +69,17 @@ export default function SettingsPage() {
   const [newKind, setNewKind] = useState<"expense" | "saving">("expense");
   const [income, setIncomeField] = useState(String(data.defaultIncome).replace(".", ","));
   const [importReport, setImportReport] = useState<string | null>(null);
-  const [confirmDanger, setConfirmDanger] = useState<null | "reset" | "clear">(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [pendingCategory, setPendingCategory] = useState<Category | null>(null);
   const jsonInput = useRef<HTMLInputElement>(null);
   const csvInput = useRef<HTMLInputElement>(null);
+
+  // Una categoria con movimenti o spese fisse collegate viene archiviata, non
+  // cancellata: la conferma deve dire quale delle due cose sta per succedere.
+  const pendingCategoryUsage = pendingCategory
+    ? data.transactions.filter((t) => t.categoryId === pendingCategory.id).length +
+      data.fixedExpenses.filter((f) => f.categoryId === pendingCategory.id).length
+    : 0;
 
   const exportJson = () =>
     download(
@@ -202,7 +209,7 @@ export default function SettingsPage() {
                 size="sm"
                 variant="ghost"
                 className="ml-auto"
-                onClick={() => removeCategory(c.id)}
+                onClick={() => setPendingCategory(c)}
               >
                 Rimuovi
               </Button>
@@ -359,50 +366,49 @@ export default function SettingsPage() {
 
       <Card
         title="Azzeramento"
-        description="Riscrivono subito il file dei dati: esporta prima un backup."
+        description="Riscrive subito il file dei dati: esporta prima un backup."
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="danger"
-            onClick={() => setConfirmDanger(confirmDanger === "clear" ? null : "clear")}
-          >
-            Svuota transazioni, budget e spese fisse
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => setConfirmDanger(confirmDanger === "reset" ? null : "reset")}
-          >
-            Ripristina i dati del foglio Numbers
-          </Button>
-        </div>
-        {confirmDanger && (
-          <div className="mt-3 rounded-lg border border-hairline-strong bg-sunken px-3 py-2.5">
-            <p className="text-xs text-ink">
-              {confirmDanger === "clear"
-                ? "Cancella tutte le transazioni, i budget e le spese fisse. Le categorie restano."
-                : "Sostituisce tutto con i dati iniziali importati dal foglio di Settembre 2026."}{" "}
-              Confermi?
-            </p>
-            <div className="mt-2 flex gap-2">
-              <Button
-                size="sm"
-                variant="danger"
-                onClick={() => {
-                  if (confirmDanger === "clear") clearAll();
-                  else resetToSeed();
-                  setConfirmDanger(null);
-                  setImportReport(null);
-                }}
-              >
-                Sì, procedi
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setConfirmDanger(null)}>
-                Annulla
-              </Button>
-            </div>
-          </div>
-        )}
+        <Button variant="danger" onClick={() => setConfirmClear(true)}>
+          Svuota transazioni, budget e spese fisse
+        </Button>
       </Card>
+
+      <ConfirmDialog
+        open={pendingCategory !== null}
+        title={pendingCategoryUsage > 0 ? "Archiviare questa categoria?" : "Eliminare questa categoria?"}
+        message={
+          pendingCategory
+            ? pendingCategoryUsage > 0
+              ? `"${pendingCategory.name}" ha ${pendingCategoryUsage} elementi collegati, quindi non viene cancellata ma archiviata: sparisce dagli elenchi e dai nuovi inserimenti, i movimenti passati restano.`
+              : `"${pendingCategory.name}" non ha movimenti né spese fisse collegate: viene cancellata del tutto.`
+            : ""
+        }
+        detail={
+          pendingCategoryUsage > 0
+            ? "Puoi ripristinarla dal riquadro delle archiviate qui sotto."
+            : "Vengono rimossi anche i budget mensili impostati su questa categoria. L'operazione non si puo' annullare."
+        }
+        confirmLabel={pendingCategoryUsage > 0 ? "Archivia" : "Elimina"}
+        onCancel={() => setPendingCategory(null)}
+        onConfirm={() => {
+          removeCategory(pendingCategory!.id);
+          setPendingCategory(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Svuotare transazioni, budget e spese fisse?"
+        message={`Vengono cancellate ${data.transactions.length} transazioni, ${data.budgets.length} budget, ${data.fixedExpenses.length} spese fisse e ${data.extraIncomes.length} entrate extra. Le categorie restano.`}
+        detail="Il file dei dati viene riscritto subito. L'operazione non si puo' annullare: se non l'hai ancora fatto, annulla ed esporta prima un backup JSON."
+        confirmLabel="Svuota"
+        onCancel={() => setConfirmClear(false)}
+        onConfirm={() => {
+          clearAll();
+          setConfirmClear(false);
+          setImportReport(null);
+        }}
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import { useMonth } from "@/lib/month";
 import { activeCategories, categoryMap, splitByAccounting, transactionsOfMonth } from "@/lib/calc";
 import { dayInMonth, formatDate, formatEur, formatMonth, monthOf, parseAmount } from "@/lib/format";
-import { Button, Card, EmptyState, Field, Input, Select } from "@/components/ui";
+import { Button, Card, ConfirmDialog, EmptyState, Field, Input, Select } from "@/components/ui";
 import type { Category, Transaction } from "@/lib/types";
 
 type Draft = {
@@ -69,7 +69,7 @@ function TransactionRows({
   onSave: () => void;
   onCancel: () => void;
   onToggleExcluded: (t: Transaction) => void;
-  onRemove: (id: string) => void;
+  onRemove: (t: Transaction) => void;
 }) {
   return (
     <>
@@ -168,7 +168,7 @@ function TransactionRows({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => onRemove(t.id)}
+                  onClick={() => onRemove(t)}
                   aria-label={`Elimina ${t.description}`}
                 >
                   Elimina
@@ -196,6 +196,7 @@ export default function TransactionsPage() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
 
   const monthTx = useMemo(() => transactionsOfMonth(data, month), [data, month]);
   const visible = useMemo(() => {
@@ -282,7 +283,7 @@ export default function TransactionsPage() {
     onSave: saveEdit,
     onCancel: cancelEdit,
     onToggleExcluded: toggleExcluded,
-    onRemove: removeTransaction,
+    onRemove: setPendingDelete,
   };
 
   return (
@@ -468,6 +469,26 @@ export default function TransactionsPage() {
           )}
         </Card>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Eliminare questa transazione?"
+        message={
+          pendingDelete
+            ? `"${pendingDelete.description}" del ${formatDate(pendingDelete.date)}, ${formatEur(pendingDelete.amount)}.`
+            : ""
+        }
+        detail={
+          pendingDelete?.fixedExpenseId
+            ? "Nasce da una spesa fissa: la voce ricorrente resta e verra' riproposta al prossimo “Genera spese fisse del mese”. L'operazione non si puo' annullare."
+            : "L'operazione non si puo' annullare."
+        }
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          removeTransaction(pendingDelete!.id);
+          setPendingDelete(null);
+        }}
+      />
     </div>
   );
 }

@@ -22,8 +22,9 @@ import {
   parseAmount,
   todayIso,
 } from "@/lib/format";
-import { Button, Card, EmptyState, Field, Input } from "@/components/ui";
+import { Button, Card, ConfirmDialog, EmptyState, Field, Input } from "@/components/ui";
 import { CategorySummaryTable } from "@/components/CategorySummaryTable";
+import type { ExtraIncome } from "@/lib/types";
 
 /** Mostra un importo in un campo di testo con la virgola decimale italiana. */
 function toField(n: number) {
@@ -61,6 +62,7 @@ export default function BudgetPage() {
     note: "",
   }));
   const [extraError, setExtraError] = useState<string | null>(null);
+  const [pendingExtra, setPendingExtra] = useState<ExtraIncome | null>(null);
 
   // Cambiando mese la data proposta deve seguire il mese mostrato.
   useEffect(() => {
@@ -274,7 +276,7 @@ export default function BudgetPage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => removeExtraIncome(e.id)}
+                    onClick={() => setPendingExtra(e)}
                     aria-label={`Elimina ${e.description}`}
                   >
                     Elimina
@@ -302,6 +304,22 @@ export default function BudgetPage() {
           <CategorySummaryTable rows={rows} />
         </div>
       </Card>
+
+      <ConfirmDialog
+        open={pendingExtra !== null}
+        title="Eliminare questa entrata extra?"
+        message={
+          pendingExtra
+            ? `"${pendingExtra.description}" del ${formatDate(pendingExtra.date)}, ${formatEur(pendingExtra.amount)}.`
+            : ""
+        }
+        detail="Le entrate del mese e il risparmio vengono ricalcolati senza questa voce. L'operazione non si puo' annullare."
+        onCancel={() => setPendingExtra(null)}
+        onConfirm={() => {
+          removeExtraIncome(pendingExtra!.id);
+          setPendingExtra(null);
+        }}
+      />
     </div>
   );
 }

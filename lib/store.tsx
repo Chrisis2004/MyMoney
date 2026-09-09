@@ -64,7 +64,6 @@ type Store = {
   generateFixedExpenses: (month: string, day: number) => number;
 
   replaceAll: (data: AppData) => void;
-  resetToSeed: () => void;
   clearAll: () => void;
 };
 
@@ -363,7 +362,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
 
       replaceAll: (next) => setData(normalizeAppData(next)),
-      resetToSeed: () => setData(clone(seedData)),
       clearAll: () =>
         setData((d) => ({
           version: 1,

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
@@ -64,7 +64,7 @@ export function Button({
   size = "md",
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+}: React.ComponentPropsWithRef<"button"> & {
   variant?: keyof typeof buttonVariants;
   size?: keyof typeof buttonSizes;
 }) {
@@ -98,6 +98,97 @@ export function LinkButton({
     );
   }
   return <a className={classes} {...props} />;
+}
+
+/**
+ * Conferma bloccante per le azioni distruttive. Non si chiude da sola: o si
+ * conferma o si annulla (Esc e clic fuori equivalgono ad Annulla). Il focus
+ * parte da Annulla, cosi' un Invio battuto per inerzia non cancella nulla.
+ */
+export function ConfirmDialog({
+  open,
+  title,
+  message,
+  detail,
+  confirmLabel = "Elimina",
+  cancelLabel = "Annulla",
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  message: ReactNode;
+  detail?: ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const bodyId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    cancelRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      previous?.focus?.();
+    };
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  // Il focus non esce dal dialogo: i due pulsanti sono i suoi unici elementi.
+  const trapTab = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab") return;
+    e.preventDefault();
+    (document.activeElement === cancelRef.current ? confirmRef : cancelRef).current?.focus();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+      onKeyDown={trapTab}
+    >
+      <div className="absolute inset-0 bg-black/40" aria-hidden onClick={onCancel} />
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={bodyId}
+        className="relative w-full max-w-md rounded-xl border border-hairline-strong bg-surface p-5 shadow-[0_12px_32px_rgba(0,0,0,0.22)]"
+      >
+        <h2 id={titleId} className="text-sm font-semibold tracking-tight text-ink">
+          {title}
+        </h2>
+        <div id={bodyId} className="mt-2 space-y-1.5">
+          <p className="text-sm leading-relaxed text-ink-secondary">{message}</p>
+          {detail && <p className="text-xs leading-relaxed text-ink-muted">{detail}</p>}
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button ref={cancelRef} size="sm" variant="secondary" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+          <Button ref={confirmRef} size="sm" variant="danger" onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Nessuna larghezza qui: la impone chi usa il campo. Field allarga i propri

@@ -5,7 +5,8 @@ import { useStore } from "@/lib/store";
 import { useMonth } from "@/lib/month";
 import { activeCategories, transactionsOfMonth } from "@/lib/calc";
 import { formatEur, formatMonth, parseAmount } from "@/lib/format";
-import { Button, Card, EmptyState, Field, Input, Select } from "@/components/ui";
+import { Button, Card, ConfirmDialog, EmptyState, Field, Input, Select } from "@/components/ui";
+import type { FixedExpense } from "@/lib/types";
 
 export default function FixedExpensesPage() {
   const { data, addFixedExpense, updateFixedExpense, removeFixedExpense, generateFixedExpenses } =
@@ -20,6 +21,7 @@ export default function FixedExpensesPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [day, setDay] = useState("1");
+  const [pendingDelete, setPendingDelete] = useState<FixedExpense | null>(null);
 
   const alreadyGenerated = useMemo(() => {
     const ids = new Set(
@@ -166,7 +168,7 @@ export default function FixedExpensesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => removeFixedExpense(fx.id)}
+                            onClick={() => setPendingDelete(fx)}
                             aria-label={`Elimina ${fx.name}`}
                           >
                             Elimina
@@ -229,6 +231,22 @@ export default function FixedExpensesPage() {
           )}
         </div>
       </Card>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Eliminare questa spesa fissa?"
+        message={
+          pendingDelete
+            ? `"${pendingDelete.name}", ${formatEur(pendingDelete.amount)} al mese.`
+            : ""
+        }
+        detail="Le transazioni gia' generate da questa spesa restano nei mesi in cui sono state registrate: sparisce solo la voce ricorrente, che non verra' piu' proposta. L'operazione non si puo' annullare."
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          removeFixedExpense(pendingDelete!.id);
+          setPendingDelete(null);
+        }}
+      />
     </div>
   );
 }
