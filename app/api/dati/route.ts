@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { dataFilePath, loadData, saveData } from "@/lib/dataFile";
+import { createClient } from "@/lib/supabase/server";
+import { loadAppData, saveAppData } from "@/lib/supabase/repository";
 
-// Il file cambia a ogni modifica: niente cache, niente prerender.
+// I dati cambiano a ogni modifica e dipendono da chi ha fatto l'accesso:
+// niente cache, niente prerender.
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -10,18 +12,27 @@ const noStore = { "Cache-Control": "no-store" };
 function failure(message: string, err: unknown, status = 500) {
   console.error(message, err);
   const detail = err instanceof Error ? err.message : String(err);
-  return NextResponse.json(
-    { error: message, detail, path: dataFilePath },
-    { status, headers: noStore },
-  );
+  return NextResponse.json({ error: message, detail }, { status, headers: noStore });
 }
+
+const unauthorized = () =>
+  NextResponse.json(
+    { error: "Sessione scaduta. Accedi di nuovo." },
+    { status: 401, headers: noStore },
+  );
 
 export async function GET() {
   try {
-    const { data, created } = await loadData();
-    return NextResponse.json({ path: dataFilePath, created, data }, { headers: noStore });
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return unauthorized();
+
+    const data = await loadAppData(supabase, user.id);
+    return NextResponse.json({ account: user.email ?? null, data }, { headers: noStore });
   } catch (err) {
-    return failure("Non riesco a leggere il file dei dati.", err);
+    return failure("Non riesco a leggere i dati.", err);
   }
 }
 
@@ -32,14 +43,21 @@ async function write(request: Request) {
   } catch (err) {
     return failure("Corpo della richiesta non valido.", err, 400);
   }
+
   try {
-    const saved = await saveData(body as never);
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return unauthorized();
+
+    const saved = await saveAppData(supabase, user.id, body as never);
     return NextResponse.json(
-      { ok: true, path: dataFilePath, savedAt: new Date().toISOString(), data: saved },
+      { ok: true, savedAt: new Date().toISOString(), data: saved },
       { headers: noStore },
     );
   } catch (err) {
-    return failure("Non riesco a scrivere il file dei dati.", err);
+    return failure("Non riesco a salvare i dati.", err);
   }
 }
 

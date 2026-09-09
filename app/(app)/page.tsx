@@ -1,14 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useMonth } from "@/lib/month";
 import { categorySummary, monthTotals, transactionsOfMonth, categoryMap } from "@/lib/calc";
 import { formatEur, formatMonth, formatDate, formatPct } from "@/lib/format";
-import { Card, EmptyState, LinkButton } from "@/components/ui";
+import { Button, Card, EmptyState } from "@/components/ui";
 import { BudgetDistribution, BudgetVsActualChart } from "@/components/charts";
 import { CategorySummaryTable } from "@/components/CategorySummaryTable";
+
+/** Il nome del file lo decide il server; qui si legge dall'intestazione. */
+function nomeDalServer(disposition: string | null): string | null {
+  if (!disposition) return null;
+  // filename* porta gli accenti, filename e' il ripiego ASCII.
+  const utf8 = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      /* percent-encoding malformato: si prova con l'altro */
+    }
+  }
+  const ascii = disposition.match(/filename="([^"]+)"/i);
+  return ascii ? ascii[1] : null;
+}
 
 function StatTile({
   label,
@@ -45,9 +61,46 @@ export default function DashboardPage() {
 
   const savingRate = totals.income > 0 ? totals.netSaving / totals.income : 0;
 
-  // Il documento lo costruisce il server leggendo il file: con un salvataggio
-  // in errore uscirebbe un riepilogo che non corrisponde a quello che vedi.
+  // Il documento lo costruisce il server leggendo il database: con un
+  // salvataggio in errore uscirebbe un riepilogo diverso da quello che vedi.
   const staleForExport = saveStatus === "error";
+
+  const [scarico, setScarico] = useState(false);
+  const [erroreScarico, setErroreScarico] = useState<string | null>(null);
+
+  /**
+   * Il .docx si chiede con fetch invece che con un link diretto: generarlo
+   * richiede qualche secondo, e un link nudo non ha modo di dirlo. Cosi' si
+   * puo' mostrare l'attesa e, se il server risponde male, mostrare l'errore
+   * invece di far scaricare al browser un file JSON con dentro il guasto.
+   */
+  const scaricaRiepilogo = async () => {
+    setScarico(true);
+    setErroreScarico(null);
+    let url: string | null = null;
+    try {
+      const res = await fetch(`/api/riepilogo?mese=${month}`, { cache: "no-store" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `HTTP ${res.status}`);
+      }
+
+      url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        nomeDalServer(res.headers.get("Content-Disposition")) ?? `riepilogo-${month}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      setErroreScarico(err instanceof Error ? err.message : String(err));
+    } finally {
+      // Revocare subito taglierebbe il download a meta' su alcuni browser.
+      if (url) window.setTimeout((u: string) => URL.revokeObjectURL(u), 60_000, url);
+      setScarico(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -55,10 +108,10 @@ export default function DashboardPage() {
         <h2 className="text-sm font-semibold tracking-tight text-ink">
           Riepilogo di {formatMonth(month)}
         </h2>
-        <LinkButton
+        <Button
           size="sm"
-          href={`/api/riepilogo?mese=${month}`}
-          download
+          onClick={scaricaRiepilogo}
+          loading={scarico}
           disabled={staleForExport}
           title={
             staleForExport
@@ -66,9 +119,19 @@ export default function DashboardPage() {
               : `Scarica il riepilogo di ${formatMonth(month)} in formato Word`
           }
         >
-          <span aria-hidden>↓</span> Scarica riepilogo Word
-        </LinkButton>
+          {!scarico && <span aria-hidden>↓</span>}
+          {scarico ? "Preparo il documento…" : "Scarica riepilogo Word"}
+        </Button>
       </div>
+
+      {erroreScarico && (
+        <p role="alert" className="text-xs text-ink">
+          <span aria-hidden style={{ color: "var(--critical)" }}>
+            ■
+          </span>{" "}
+          Non sono riuscito a preparare il riepilogo: {erroreScarico}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile

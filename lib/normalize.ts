@@ -15,7 +15,12 @@ const ISO_MONTH = /^\d{4}-\d{2}$/;
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null;
 
-const str = (v: unknown) => (typeof v === "string" ? v : "");
+/**
+ * Gli spazi ai bordi si tagliano subito: i check del database rifiutano nomi e
+ * descrizioni fatti di soli spazi, e tagliando qui client e server vedono
+ * sempre lo stesso valore.
+ */
+const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : Number.NaN);
 
 function clone<T>(value: T): T {

@@ -50,7 +50,7 @@ function parseDate(raw: string) {
 export default function SettingsPage() {
   const {
     data,
-    filePath,
+    account,
     savedAt,
     saveStatus,
     reload,
@@ -65,6 +65,13 @@ export default function SettingsPage() {
 
   const categories = useMemo(() => activeCategories(data), [data]);
   const archived = data.categories.filter((c) => c.archived);
+  const [ricarico, setRicarico] = useState(false);
+  const ricarica = async () => {
+    setRicarico(true);
+    await reload();
+    setRicarico(false);
+  };
+
   const [newCat, setNewCat] = useState("");
   const [newKind, setNewKind] = useState<"expense" | "saving">("expense");
   const [income, setIncomeField] = useState(String(data.defaultIncome).replace(".", ","));
@@ -290,16 +297,16 @@ export default function SettingsPage() {
       </Card>
 
       <Card
-        title="File dei dati"
-        description="Tutto quello che inserisci finisce qui, riscritto a ogni modifica."
+        title="Account"
+        description="I dati stanno su Supabase e sono legati a questo indirizzo."
         action={
-          <Button size="sm" onClick={reload}>
-            Ricarica dal file
+          <Button size="sm" onClick={ricarica} loading={ricarico}>
+            Ricarica dal database
           </Button>
         }
       >
         <p className="break-all rounded-lg border border-hairline bg-sunken px-3 py-2 text-xs text-ink">
-          {filePath ?? "percorso non disponibile"}
+          {account ?? "account non disponibile"}
         </p>
         <p className="mt-2 text-xs text-ink-secondary">
           {saveStatus === "error"
@@ -307,9 +314,8 @@ export default function SettingsPage() {
             : savedAt
               ? `Ultimo salvataggio: ${new Date(savedAt).toLocaleString("it-IT")}.`
               : "Nessuna modifica da salvare in questa sessione."}{" "}
-          Accanto al file viene tenuta una copia <code>.bak</code> della versione precedente.
-          Per spostarlo altrove (per esempio in una cartella sincronizzata) imposta la variabile
-          d&apos;ambiente <code>RISPARMIO_DATA_FILE</code> e riavvia l&apos;app.
+          Ogni riga è protetta dalle policy del database: nessun altro account può leggere o
+          modificare questi dati.
         </p>
         <p className="mt-2 text-xs text-ink-muted">
           Tieni aperta una sola scheda per volta: due schede che modificano gli stessi dati si

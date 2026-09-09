@@ -1,0 +1,23 @@
+import { redirect } from "next/navigation";
+import { StoreProvider } from "@/lib/store";
+import { MonthProvider } from "@/lib/month";
+import { AppShell } from "@/components/AppShell";
+import { currentUser } from "@/lib/supabase/server";
+
+/**
+ * Tutte le pagine dell'app vivono qui dentro, e qui dentro si entra solo con
+ * una sessione. Il middleware fa gia' da filtro; questo controllo lo raddoppia
+ * sul server, perche' e' il layout a decidere cosa viene renderizzato.
+ */
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const user = await currentUser();
+  if (!user) redirect("/accedi");
+
+  return (
+    <StoreProvider>
+      <MonthProvider>
+        <AppShell>{children}</AppShell>
+      </MonthProvider>
+    </StoreProvider>
+  );
+}

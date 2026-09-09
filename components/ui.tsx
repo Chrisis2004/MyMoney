@@ -44,8 +44,36 @@ export function Card({
   );
 }
 
+/**
+ * Il cerchietto delle attese brevi. E' decorativo: chi legge con lo schermo
+ * sente il testo del pulsante, che cambia da solo, piu' l'aria-busy.
+ */
+export function Spinner({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden
+      className={cx("spin size-3.5 shrink-0", className)}
+    >
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2" />
+      <path
+        d="M8 1.5a6.5 6.5 0 0 1 6.5 6.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Un rettangolo che respira, al posto di un contenuto che deve ancora arrivare. */
+export function Skeleton({ className }: { className?: string }) {
+  return <div aria-hidden className={cx("skeleton rounded-md", className)} />;
+}
+
 const buttonBase =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45";
+  "inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed";
 
 const buttonVariants = {
   primary: "bg-ink text-page hover:opacity-90",
@@ -62,42 +90,37 @@ const buttonSizes = {
 export function Button({
   variant = "secondary",
   size = "md",
+  loading = false,
   className,
+  children,
+  disabled,
   ...props
 }: React.ComponentPropsWithRef<"button"> & {
   variant?: keyof typeof buttonVariants;
   size?: keyof typeof buttonSizes;
+  /** Azione in corso: cerchietto, niente doppi clic, ma il pulsante resta leggibile. */
+  loading?: boolean;
 }) {
   return (
     <button
       type="button"
-      className={cx(buttonBase, buttonVariants[variant], buttonSizes[size], className)}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={cx(
+        buttonBase,
+        buttonVariants[variant],
+        buttonSizes[size],
+        // Un pulsante in attesa non va sbiadito come uno disattivato: sta
+        // lavorando, e il testo deve restare leggibile.
+        loading ? "opacity-80" : disabled && "opacity-45",
+        className,
+      )}
       {...props}
-    />
+    >
+      {loading && <Spinner className={size === "sm" ? "size-3" : undefined} />}
+      {children}
+    </button>
   );
-}
-
-/** Stessa resa di Button, ma per un vero link: serve per i download. */
-export function LinkButton({
-  variant = "secondary",
-  size = "md",
-  className,
-  disabled,
-  ...props
-}: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
-  variant?: keyof typeof buttonVariants;
-  size?: keyof typeof buttonSizes;
-  disabled?: boolean;
-}) {
-  const classes = cx(buttonBase, buttonVariants[variant], buttonSizes[size], className);
-  if (disabled) {
-    return (
-      <span aria-disabled className={cx(classes, "cursor-not-allowed opacity-45")}>
-        {props.children}
-      </span>
-    );
-  }
-  return <a className={classes} {...props} />;
 }
 
 /**
@@ -194,7 +217,7 @@ export function ConfirmDialog({
 // Nessuna larghezza qui: la impone chi usa il campo. Field allarga i propri
 // controlli, altrove si dichiara una larghezza esplicita.
 const fieldBase =
-  "rounded-lg border border-hairline-strong bg-surface px-2.5 text-sm text-ink placeholder:text-ink-muted";
+  "rounded-lg border border-hairline-strong bg-surface px-2.5 text-sm text-ink placeholder:text-ink-muted disabled:cursor-not-allowed disabled:opacity-50";
 
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cx(fieldBase, "h-9", className)} {...props} />;
@@ -221,6 +244,50 @@ export function Field({
       {children}
       {hint && <span className="mt-1 block text-[11px] text-ink-muted">{hint}</span>}
     </label>
+  );
+}
+
+/**
+ * Ossatura di una pagina mentre i dati arrivano. Ripete le proporzioni delle
+ * pagine vere — titolo, riga di riquadri, due schede — cosi' quando il
+ * contenuto compare il layout non salta.
+ *
+ * L'attesa e' annunciata una volta sola, a parole, da uno `sr-only`: i
+ * rettangoli sono aria-hidden perche' letti uno per uno non direbbero niente.
+ */
+export function PageSkeleton() {
+  return (
+    <div role="status" aria-live="polite" className="space-y-5">
+      <span className="sr-only">Carico i dati…</span>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-8 w-44" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl border border-hairline bg-surface px-4 py-3.5">
+            <Skeleton className="h-3 w-14" />
+            <Skeleton className="mt-2 h-7 w-24" />
+          </div>
+        ))}
+      </div>
+
+      {[0, 1].map((i) => (
+        <div key={i} className="rounded-xl border border-hairline bg-surface">
+          <div className="border-b border-hairline px-4 py-3 sm:px-5">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-1.5 h-3 w-64 max-w-full" />
+          </div>
+          <div className="space-y-2.5 px-4 py-4 sm:px-5">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-11/12" />
+            <Skeleton className="h-3 w-4/6" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

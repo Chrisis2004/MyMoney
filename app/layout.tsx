@@ -1,8 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { StoreProvider } from "@/lib/store";
-import { MonthProvider } from "@/lib/month";
-import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "Gestione risparmio",
@@ -27,19 +24,18 @@ try {
 } catch (e) {}
 `;
 
+/**
+ * Il guscio minimo. Lo store e la navigazione stanno nel gruppo (app), cosi'
+ * le pagine di accesso non montano il provider che carica i dati: senza
+ * sessione andrebbe in 401 e rimbalzerebbe di nuovo qui.
+ */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
-      <body className="min-h-screen">
-        <StoreProvider>
-          <MonthProvider>
-            <AppShell>{children}</AppShell>
-          </MonthProvider>
-        </StoreProvider>
-      </body>
+      <body className="min-h-screen">{children}</body>
     </html>
   );
 }

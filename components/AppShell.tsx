@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link, { useLinkStatus } from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
+import { createClient } from "@/lib/supabase/client";
 import { useMonth } from "@/lib/month";
 import { addMonths, formatMonth } from "@/lib/format";
-import { Button, cx } from "./ui";
+import { Button, PageSkeleton, cx } from "./ui";
 
 const NAV = [
   { href: "/", label: "Riepilogo" },
@@ -48,7 +49,7 @@ function ThemeToggle() {
   );
 }
 
-/** Stato del salvataggio sul file. Icona piu' testo: mai solo colore. */
+/** Stato del salvataggio sul database. Icona piu' testo: mai solo colore. */
 function SaveIndicator() {
   const { saveStatus, savedAt } = useStore();
   if (saveStatus === "idle") return null;
@@ -74,6 +75,64 @@ function SaveIndicator() {
       </span>
       {meta.label}
     </span>
+  );
+}
+
+function LogoutButton() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  const esci = async () => {
+    setBusy(true);
+    await createClient().auth.signOut();
+    router.replace("/accedi");
+    // Senza refresh i Server Component resterebbero sull'utente di prima.
+    router.refresh();
+    // busy resta acceso: la navigazione e' in corso e il pulsante non deve
+    // tornare cliccabile per il tempo che ci mette.
+  };
+
+  return (
+    <Button variant="ghost" size="sm" onClick={esci} loading={busy}>
+      {busy ? "Esco…" : "Esci"}
+    </Button>
+  );
+}
+
+/**
+ * La barretta che scorre sotto la voce verso cui si sta navigando. Vive dentro
+ * il <Link>, perche' useLinkStatus racconta lo stato del link che la contiene.
+ * E' in posizione assoluta di proposito: un indicatore che occupasse spazio
+ * farebbe allargare la voce e ballare tutto il menu proprio mentre lo si usa.
+ */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-x-1.5 bottom-1 h-0.5 overflow-hidden rounded-full"
+    >
+      <span className="nav-bar block h-full w-2/5 rounded-full bg-current opacity-70" />
+    </span>
+  );
+}
+
+function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cx(
+        "relative inline-flex h-8 items-center whitespace-nowrap rounded-lg px-3 text-sm transition-colors",
+        active
+          ? "bg-ink font-medium text-page"
+          : "text-ink-secondary hover:bg-sunken hover:text-ink",
+      )}
+    >
+      {label}
+      <NavPending />
+    </Link>
   );
 }
 
@@ -107,8 +166,15 @@ function MonthNav() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { ready, loadError, saveStatus, saveError, filePath, reload, retrySave } = useStore();
+  const { ready, loadError, saveStatus, saveError, account, reload, retrySave } = useStore();
   const pathname = usePathname();
+  const [ricarico, setRicarico] = useState(false);
+
+  const riprovaLettura = async () => {
+    setRicarico(true);
+    await reload();
+    setRicarico(false);
+  };
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-7">
@@ -120,30 +186,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-3">
           <SaveIndicator />
           <ThemeToggle />
+          <LogoutButton />
         </div>
       </header>
 
       <nav className="scroll-x -mx-1 shrink-0">
         <ul className="flex w-max gap-1 px-1">
-          {NAV.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cx(
-                    "inline-flex h-8 items-center whitespace-nowrap rounded-lg px-3 text-sm transition-colors",
-                    active
-                      ? "bg-ink font-medium text-page"
-                      : "text-ink-secondary hover:bg-sunken hover:text-ink",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
+          {NAV.map((item) => (
+            <li key={item.href}>
+              <NavLink href={item.href} label={item.label} active={pathname === item.href} />
+            </li>
+          ))}
         </ul>
       </nav>
 
@@ -156,8 +209,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span aria-hidden style={{ color: "var(--critical)" }}>
               ■
             </span>{" "}
-            Le ultime modifiche non sono state scritte sul file{saveError ? `: ${saveError}` : "."}{" "}
-            Restano in questa pagina finché non la chiudi.
+            Le ultime modifiche non sono arrivate al database
+            {saveError ? `: ${saveError}` : "."} Restano in questa pagina finché non la chiudi.
           </p>
           <Button size="sm" onClick={retrySave}>
             Riprova
@@ -167,21 +220,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">
         {!ready ? (
-          <p className="py-16 text-center text-sm text-ink-muted">Carico i dati…</p>
+          <PageSkeleton />
         ) : loadError ? (
           <div className="mx-auto max-w-lg rounded-xl border border-hairline bg-surface px-5 py-8 text-center">
-            <p className="text-sm font-medium text-ink">Non riesco a leggere il file dei dati</p>
+            <p className="text-sm font-medium text-ink">Non riesco a leggere i dati</p>
             <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
               {saveError ?? loadError}
             </p>
-            {filePath && (
-              <p className="mt-2 break-all text-[11px] text-ink-muted">{filePath}</p>
-            )}
             <p className="mt-3 text-xs text-ink-secondary">
               Per non sovrascrivere dati validi l&apos;app non salva finché la lettura non
               riesce.
             </p>
-            <Button variant="primary" className="mt-4" onClick={reload}>
+            <Button
+              variant="primary"
+              className="mt-4"
+              onClick={riprovaLettura}
+              loading={ricarico}
+            >
               Riprova
             </Button>
           </div>
@@ -191,12 +246,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="border-t border-hairline pt-3 text-[11px] text-ink-muted">
-        {filePath ? (
+        {account ? (
           <>
-            Dati salvati in <code className="break-all">{filePath}</code>
+            Dati salvati sul tuo account <code className="break-all">{account}</code>
           </>
         ) : (
-          "Dati salvati in un file sul tuo computer."
+          "Dati salvati sul tuo account."
         )}
       </footer>
     </div>

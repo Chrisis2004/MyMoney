@@ -150,3 +150,63 @@ body {
   overflow-x: auto;
   overscroll-behavior-x: contain;
 }
+
+/*
+  Attese. Tre forme, una per tipo di attesa:
+  - .spin      il cerchietto nei pulsanti, per un'azione appena chiesta
+  - .skeleton  l'ossatura di una pagina i cui dati stanno arrivando
+  - .nav-bar   la barretta sotto la voce di menu verso cui si sta navigando
+
+  Con prefers-reduced-motion niente rotazioni ne' scorrimenti: resta la sola
+  variazione di opacita', che comunica "sto lavorando" senza movimento.
+*/
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes slide-across {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.spin {
+  transform-origin: 50% 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.skeleton {
+  background: var(--surface-sunken);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+/* La barretta scorre dentro un contenitore che la ritaglia: non essendoci una
+   percentuale nota di avanzamento, il movimento dice solo "sta arrivando". */
+.nav-bar {
+  animation: slide-across 0.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: breathe 1.4s ease-in-out infinite;
+  }
+  .skeleton {
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  .nav-bar {
+    animation: breathe 1.4s ease-in-out infinite;
+    transform: none;
+    width: 100%;
+  }
+}

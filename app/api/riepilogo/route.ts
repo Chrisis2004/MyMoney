@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { loadData } from "@/lib/dataFile";
+import { createClient } from "@/lib/supabase/server";
+import { loadAppData } from "@/lib/supabase/repository";
 import { buildMonthReport, reportFileName } from "@/lib/report";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,18 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { data } = await loadData();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Sessione scaduta. Accedi di nuovo." },
+        { status: 401 },
+      );
+    }
+
+    const data = await loadAppData(supabase, user.id);
     const buffer = await buildMonthReport(data, month);
     const name = reportFileName(month);
 

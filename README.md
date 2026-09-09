@@ -6,10 +6,47 @@ risparmio nel tempo.
 
 ## Avvio
 
+L'app si appoggia a Supabase: database Postgres per i dati, autenticazione via email e
+password. Serve un progetto Supabase e due variabili d'ambiente.
+
+**1. Crea lo schema.** Apri il progetto su [supabase.com](https://supabase.com), vai in
+*SQL Editor*, incolla il contenuto di [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql)
+ed esegui. Crea le tabelle, le policy RLS e il trigger che dà a ogni nuovo account le
+categorie di partenza.
+
+**2. Disattiva la conferma via email.** In *Authentication → Sign In / Providers → Email*
+togli *Confirm email*, così ci si registra e si entra subito. Lasciandola attiva l'app
+funziona lo stesso, ma dopo la registrazione bisogna aprire il link ricevuto per posta.
+
+**3. Configura le variabili.** Copia `.env.local.example` in `.env.local` e riempilo con i
+valori del progetto:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
+```
+
+- **URL** — *Project Settings → Data API → Project URL*. Solo schema e host, senza percorsi:
+  `supabase-js` aggiunge da sé `/auth/v1` e `/rest/v1`. Lasciandoci dentro un `/rest/v1`
+  la registrazione fallisce con `PGRST125: Invalid path specified in request URL`, perché
+  la chiamata di autenticazione finisce su PostgREST invece che su GoTrue.
+- **Chiave** — *Project Settings → API Keys → Publishable key* (`sb_publishable_…`, quella
+  che un tempo si chiamava `anon`). È pensata per stare nel browser: da sola non apre
+  niente, sono le policy RLS a decidere cosa ciascun account può vedere.
+
+> Non usare qui la **Secret key** (`sb_secret_…`, già `service_role`). Scavalca le RLS, e
+> in una variabile `NEXT_PUBLIC_` finisce nel bundle JavaScript che il browser scarica:
+> chiunque apra la pagina potrebbe leggere e modificare i dati di tutti gli account. Se
+> succede: revocala da *API Keys*, ripulisci `.next`, riparti con quella pubblicabile.
+
+**4. Avvia.**
+
 ```bash
 bun install
 bun run dev      # http://localhost:3000
 ```
+
+La prima volta vai su `/registrazione` e crea il tuo account.
 
 Build di produzione:
 
@@ -22,39 +59,84 @@ bun run start
 > stessa cartella `.next` e il dev server si rompe. Se succede: ferma il dev server,
 > `rm -rf .next`, riavvia.
 
+### Portare dentro i dati del vecchio file
+
+Chi arriva dalla versione che salvava su file lancia una volta sola, dopo essersi
+registrato:
+
+```bash
+bun run importa -- --email tua@email.it --password laTuaPassword
+```
+
+Legge `data/gestione-risparmio.json` (con `--file` se ne indica un altro, per esempio una
+delle istantanee in `data/backups/`) e lo riversa sul proprio account. Entra come utente
+normale, quindi passa dalle stesse policy RLS dell'app: nessuna service key in giro.
+Rilanciarlo è innocuo, riallinea e basta.
+
 ## Dove stanno i dati
 
-In un file JSON sul disco, riscritto a ogni modifica:
+Su Supabase, una tabella per concetto, ogni riga intestata a un utente:
 
-```
-data/gestione-risparmio.json          # i tuoi dati
-data/gestione-risparmio.json.bak      # la versione immediatamente precedente
-data/backups/AAAA-MM-GG.json          # com'erano all'inizio di quel giorno (ultimi 30)
+| Tabella | Cosa contiene |
+|---|---|
+| `settings` | Le preferenze dell'account: per ora l'entrata mensile predefinita. Una riga per utente. |
+| `categories` | Le categorie, con ordine di visualizzazione e tipo (`expense` o `saving`). |
+| `fixed_expenses` | Le spese fisse ricorrenti da cui si generano i movimenti del mese. |
+| `transactions` | I movimenti: data, descrizione, categoria, importo, provenienza, flag *non contabilizzato*. |
+| `budgets` | Il budget di una categoria in un mese preciso. Una riga per coppia mese+categoria. |
+| `incomes` | L'entrata fissa di un mese. Manca il mese: vale `settings.default_income`. |
+| `extra_incomes` | Le entrate occasionali con una data. |
+
+Gli id restano testuali e generati dal client (`groceries`, `tx-a1b2`) e la chiave primaria
+è composta `(user_id, id)`: due account possono avere la stessa categoria `groceries` senza
+interferire.
+
+### Permessi
+
+Su ogni tabella la Row Level Security è attiva e c'è una sola policy, valida per
+select/insert/update/delete:
+
+```sql
+using (auth.uid() = user_id) with check (auth.uid() = user_id)
 ```
 
-Il salvataggio è automatico: dopo ogni modifica parte una scrittura (raggruppata su
-400 ms, così una raffica di modifiche produce una sola scrittura). L'indicatore in alto a
-destra dice *Salvo… / Salvato / Non salvato*; se una scrittura fallisce compare una barra
-rossa con **Riprova**, e le modifiche restano nella pagina finché non la chiudi.
+`using` decide quali righe esistenti l'utente può vedere e toccare, `with check` cosa gli è
+concesso scrivere — in particolare non può intestare righe a qualcun altro. Senza RLS la
+chiave anonima, che sta nel browser, leggerebbe i dati di tutti.
+
+Un account appena creato riceve dal trigger `handle_new_user` la riga di `settings` e le
+undici categorie di partenza, altrimenti la prima schermata sarebbe vuota e nessuna spesa
+registrabile.
+
+### Come salva
+
+Il salvataggio è automatico: dopo ogni modifica parte una scrittura (raggruppata su 400 ms,
+così una raffica di modifiche produce una sola richiesta). L'indicatore in alto a destra
+dice *Salvo… / Salvato / Non salvato*; se una scrittura fallisce compare una barra rossa con
+**Riprova**, e le modifiche restano nella pagina finché non la chiudi.
 
 Dettagli che contano:
 
-- **Scrittura atomica.** Si scrive su un file temporaneo, si copia il file corrente in
-  `.bak`, poi si rinomina. Un'interruzione a metà non lascia il file troncato.
+- **Si scrive solo ciò che cambia.** L'app tiene in memoria un unico oggetto `AppData`; il
+  server (`lib/supabase/repository.ts`) lo confronta riga per riga con quello che c'è già e
+  manda al database solo le differenze. Modificare un importo non riscrive tutto lo storico.
+- **L'ordine delle operazioni segue le foreign key.** Le categorie nascono prima di ciò che
+  le referenzia e muoiono per ultime. PostgREST non offre una transazione unica, ma ogni
+  passo è idempotente: un salvataggio interrotto viene sanato dal successivo.
 - **Niente scritture prima di aver letto.** Un flag interno si alza solo dopo una lettura
   riuscita; finché è basso nessuna scrittura può partire, nemmeno quella di chiusura
   pagina. Senza questo controllo una lettura fallita seguita dalla chiusura della scheda
-  spediva lo stato iniziale e cancellava il file.
+  spediva lo stato iniziale e cancellava i dati.
 - **Se la lettura fallisce l'app non scrive.** Compare una schermata d'errore con
-  *Riprova*: meglio non poter lavorare che sovrascrivere un file valido con dati parziali.
-- **I dati in arrivo vengono validati** (`lib/normalize.ts`) prima di finire sul file: le
-  righe malformate vengono scartate, non salvate.
+  *Riprova*: meglio non poter lavorare che sovrascrivere dati validi con dati parziali.
+- **I dati in arrivo vengono validati** (`lib/normalize.ts`) prima di toccare il database:
+  le righe malformate vengono scartate, non salvate.
 - **Alla chiusura della pagina** l'ultima modifica non ancora scritta parte con
   `navigator.sendBeacon`, così non si perde.
+- **Sessione scaduta:** l'API risponde 401 e l'app riporta all'accesso invece di mostrare un
+  errore che l'utente non può risolvere restando lì.
 - **Una scheda per volta.** Due schede aperte sugli stessi dati si sovrascrivono a vicenda:
   vince l'ultima che scrive.
-- **Spostare il file:** imposta `RISPARMIO_DATA_FILE` con un percorso assoluto (per esempio
-  una cartella iCloud o OneDrive) e riavvia. `data/` è escluso da git.
 
 Restano nel browser solo due preferenze di interfaccia: il tema chiaro/scuro (serve prima
 del primo paint, quindi deve stare lì) e il mese selezionato.
@@ -62,6 +144,31 @@ del primo paint, quindi deve stare lì) e il mese selezionato.
 Da **Impostazioni** puoi comunque esportare un backup JSON, ripristinarlo, ed
 esportare/importare le transazioni in CSV (`Data;Descrizione;Categoria;Importo;Note`),
 formato leggibile da Numbers ed Excel.
+
+### Le attese
+
+Ogni cosa che fa aspettare lo dice, con la forma adatta alla sua durata:
+
+| Dove | Cosa si vede |
+|---|---|
+| Primo caricamento dei dati | L'ossatura della pagina (`PageSkeleton`): titolo, riga di riquadri, due schede. Ha le proporzioni del contenuto vero, così quando arriva il layout non salta. |
+| Passaggio da una pagina all'altra | Una barretta che scorre sotto la voce di menu verso cui si sta andando (`useLinkStatus`), e `app/(app)/loading.tsx` al posto del contenuto. È in posizione assoluta: un indicatore che occupasse spazio farebbe ballare il menu proprio mentre lo si usa. |
+| Accesso, registrazione, uscita | Cerchietto dentro il pulsante e testo che cambia (*Accedo…*). Il pulsante **resta** in attesa dopo che le credenziali sono passate, perché la pagina di destinazione deve ancora arrivare: spegnerlo lì farebbe sembrare il clic andato perso. |
+| Riepilogo Word | *Preparo il documento…*. Il `.docx` si chiede con `fetch` e non con un link diretto, così l'attesa è visibile e un errore del server diventa un messaggio invece di un file JSON scaricato. |
+| Salvataggio | L'indicatore in alto a destra: *Salvo… / Salvato / Non salvato*. |
+
+In produzione le pagine vengono prefetchate, quindi tra una pagina e l'altra l'indicatore
+compare solo quando c'è davvero da aspettare — rete lenta, cache fredda, primo ingresso.
+
+Con `prefers-reduced-motion` niente rotazioni né scorrimenti: resta la sola variazione di
+opacità, che dice "sto lavorando" senza movimento.
+
+### Accesso
+
+Registrazione e accesso con email e password (`/registrazione`, `/accedi`). Il
+`middleware.ts` gira prima di ogni richiesta: rinnova il token scaduto e sbarra la strada a
+chi non ha una sessione — redirect alle pagine, 401 alle chiamate API. Il layout del gruppo
+`(app)` ripete il controllo sul server, perché è lui a decidere cosa viene renderizzato.
 
 ## Pagine
 
@@ -123,7 +230,7 @@ quella giusta sulla carta bianca: importi a destra, differenze negative e sforam
 rosso, righe alternate, intestazioni ripetute quando una tabella cambia pagina, piè di pagina
 con numerazione. Lo stato del budget resta icona **più** etichetta, mai il solo colore.
 
-Lo costruisce il server leggendo il file dei dati (`GET /api/riepilogo?mese=AAAA-MM`), non lo
+Lo costruisce il server leggendo il database (`GET /api/riepilogo?mese=AAAA-MM`), non lo
 stato della pagina. Per questo il pulsante si disabilita quando un salvataggio è in errore:
 il documento non corrisponderebbe a quello che vedi a schermo.
 
@@ -155,12 +262,16 @@ Le tre transazioni di settembre nel seed sono ricostruite solo in parte dal file
 ## Struttura
 
 ```
-app/              una cartella per pagina (App Router)
-app/api/dati/     GET legge il file, PUT/POST lo riscrivono
+app/(app)/        le pagine vere, dietro l'accesso (App Router)
+app/(auth)/       accedi e registrazione, fuori dallo store
+app/api/dati/     GET legge dal database, PUT/POST scrivono le differenze
 app/api/riepilogo/ genera il .docx del mese
+middleware.ts     rinnovo della sessione e blocco di chi non ha fatto l'accesso
+supabase/migrations/ lo schema SQL da eseguire sul progetto Supabase
+scripts/          importazione una tantum del vecchio file JSON
+lib/supabase/     client (browser/server) e repository tabelle <-> AppData
 lib/report.ts     costruzione del documento Word
-components/       AppShell, primitivi UI, grafici, tabella riepilogo
-lib/dataFile.ts   lettura/scrittura atomica del file (solo server)
+components/       AppShell, modulo di accesso, primitivi UI, grafici, tabelle
 lib/normalize.ts  validazione dei dati in ingresso (client e server)
 lib/store.tsx     stato dell'app e salvataggio automatico
 lib/calc.ts       calcoli derivati; lib/format.ts formattazione it-IT

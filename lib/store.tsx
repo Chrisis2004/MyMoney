@@ -16,10 +16,10 @@ import { makeId } from "./calc";
 import { dayInMonth, monthOf } from "./format";
 
 const API = "/api/dati";
-/** Chiave della vecchia versione dell'app: si migra al file una volta sola. */
-const LEGACY_KEY = "gestione-risparmio:v1";
 /** Attesa prima di scrivere: raggruppa le modifiche rapide in un solo salvataggio. */
 const SAVE_DELAY = 400;
+/** Dove si finisce quando la sessione non e' piu' valida. */
+const LOGIN_PATH = "/accedi";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -27,15 +27,15 @@ type Store = {
   data: AppData;
   /** false finche' il file non e' stato letto. */
   ready: boolean;
-  /** Errore bloccante in lettura: l'app non deve scrivere sopra un file che non ha letto. */
+  /** Errore bloccante in lettura: l'app non deve scrivere sopra dati che non ha letto. */
   loadError: string | null;
   saveStatus: SaveStatus;
   saveError: string | null;
-  /** Percorso del file sul disco, mostrato in Impostazioni. */
-  filePath: string | null;
+  /** Email dell'account che ha fatto l'accesso, mostrata in Impostazioni. */
+  account: string | null;
   /** Ultimo salvataggio confermato dal server. */
   savedAt: string | null;
-  reload: () => void;
+  reload: () => Promise<void>;
   retrySave: () => void;
 
   addTransaction: (tx: Omit<Transaction, "id">) => void;
@@ -69,18 +69,13 @@ type Store = {
 
 const StoreContext = createContext<Store | null>(null);
 
-/** Dati lasciati dalla versione che salvava nel browser, se ce ne sono. */
-function readLegacyData(): AppData | null {
-  try {
-    const raw = window.localStorage.getItem(LEGACY_KEY);
-    if (!raw) return null;
-    const parsed = normalizeAppData(JSON.parse(raw));
-    const empty =
-      !parsed.transactions.length && !parsed.budgets.length && !parsed.fixedExpenses.length;
-    return empty ? null : parsed;
-  } catch {
-    return null;
-  }
+/**
+ * Sessione finita mentre l'app era aperta: si torna all'accesso invece di
+ * mostrare un errore che l'utente non puo' risolvere restando qui.
+ */
+function toLogin() {
+  const here = window.location.pathname;
+  window.location.assign(here === "/" ? LOGIN_PATH : `${LOGIN_PATH}?vai=${encodeURIComponent(here)}`);
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
@@ -89,15 +84,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [filePath, setFilePath] = useState<string | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  // JSON dell'ultimo stato confermato dal file: serve a non riscrivere invano
-  // e a capire cosa e' rimasto in sospeso alla chiusura della pagina.
+  // JSON dell'ultimo stato confermato dal database: serve a non riscrivere
+  // invano e a capire cosa e' rimasto in sospeso alla chiusura della pagina.
   const savedJson = useRef<string | null>(null);
   /**
    * Diventa true solo dopo una lettura riuscita. Finche' e' false NIENTE puo'
-   * scrivere: prima di leggere il file lo stato in memoria e' ancora quello
+   * scrivere: prima di leggere il database lo stato in memoria e' ancora quello
    * iniziale, e spedirlo cancellerebbe i dati veri. Serve un ref e non uno
    * stato perche' anche il gestore di `pagehide`, che non passa dal ciclo di
    * render, deve vedere il valore aggiornato all'istante.
@@ -115,6 +110,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         body: json,
       });
       const body = await res.json().catch(() => null);
+      if (res.status === 401) return toLogin();
       if (!res.ok) throw new Error(body?.detail || body?.error || `HTTP ${res.status}`);
       savedJson.current = json;
       setSavedAt(body?.savedAt ?? new Date().toISOString());
@@ -131,19 +127,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(API, { cache: "no-store" });
       const body = await res.json().catch(() => null);
+      if (res.status === 401) return toLogin();
       if (!res.ok) throw new Error(body?.detail || body?.error || `HTTP ${res.status}`);
 
-      const onDisk = normalizeAppData(body.data);
-      setFilePath(body.path ?? null);
-      savedJson.current = JSON.stringify(onDisk);
-
-      // Prima apertura dopo il passaggio al file: si recupera quello che era
-      // rimasto nel browser invece di ripartire dai dati iniziali. Differendo
-      // da quanto c'e' sul disco, il salvataggio automatico lo scrive da se'.
-      const legacy = body.created ? readLegacyData() : null;
+      const stored = normalizeAppData(body.data);
+      setAccount(body.account ?? null);
+      savedJson.current = JSON.stringify(stored);
 
       loadedOk.current = true;
-      setData(legacy ?? onDisk);
+      setData(stored);
       setReady(true);
     } catch (err) {
       loadedOk.current = false;
@@ -204,9 +196,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       loadError,
       saveStatus,
       saveError,
-      filePath,
+      account,
       savedAt,
-      reload: () => void load(),
+      reload: () => load(),
       retrySave: () => {
         if (loadedOk.current) void persist(JSON.stringify(dataRef.current));
       },
@@ -374,7 +366,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           extraIncomes: [],
         })),
     };
-  }, [data, ready, loadError, saveStatus, saveError, filePath, savedAt, load, persist, update]);
+  }, [data, ready, loadError, saveStatus, saveError, account, savedAt, load, persist, update]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }
