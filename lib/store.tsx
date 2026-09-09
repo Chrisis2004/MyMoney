@@ -31,8 +31,6 @@ type Store = {
   loadError: string | null;
   saveStatus: SaveStatus;
   saveError: string | null;
-  /** Email dell'account che ha fatto l'accesso, mostrata in Impostazioni. */
-  account: string | null;
   /** Ultimo salvataggio confermato dal server. */
   savedAt: string | null;
   reload: () => Promise<void>;
@@ -84,7 +82,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [account, setAccount] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   // JSON dell'ultimo stato confermato dal database: serve a non riscrivere
@@ -131,7 +128,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error(body?.detail || body?.error || `HTTP ${res.status}`);
 
       const stored = normalizeAppData(body.data);
-      setAccount(body.account ?? null);
       savedJson.current = JSON.stringify(stored);
 
       loadedOk.current = true;
@@ -196,7 +192,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       loadError,
       saveStatus,
       saveError,
-      account,
       savedAt,
       reload: () => load(),
       retrySave: () => {
@@ -366,7 +361,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           extraIncomes: [],
         })),
     };
-  }, [data, ready, loadError, saveStatus, saveError, account, savedAt, load, persist, update]);
+  }, [data, ready, loadError, saveStatus, saveError, savedAt, load, persist, update]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

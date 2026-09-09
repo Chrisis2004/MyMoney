@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { StoreProvider } from "@/lib/store";
 import { MonthProvider } from "@/lib/month";
+import { SessionProvider } from "@/lib/session";
+import { accountFrom } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { currentUser } from "@/lib/supabase/server";
 
@@ -14,10 +16,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect("/accedi");
 
   return (
-    <StoreProvider>
-      <MonthProvider>
-        <AppShell>{children}</AppShell>
-      </MonthProvider>
-    </StoreProvider>
+    <SessionProvider account={accountFrom(user)}>
+      <StoreProvider>
+        <MonthProvider>
+          <AppShell>{children}</AppShell>
+        </MonthProvider>
+      </StoreProvider>
+    </SessionProvider>
   );
 }

@@ -29,8 +29,10 @@ export async function GET() {
     } = await supabase.auth.getUser();
     if (!user) return unauthorized();
 
+    // Chi sia l'utente non passa di qui: il nome e l'email li da' gia' il
+    // layout del server, che ha la sessione verificata sotto mano.
     const data = await loadAppData(supabase, user.id);
-    return NextResponse.json({ account: user.email ?? null, data }, { headers: noStore });
+    return NextResponse.json({ data }, { headers: noStore });
   } catch (err) {
     return failure("Non riesco a leggere i dati.", err);
   }

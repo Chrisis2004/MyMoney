@@ -4,6 +4,8 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
+import { useAccount } from "@/lib/session";
+import { iniziali, nomeCompleto } from "@/lib/account";
 import { createClient } from "@/lib/supabase/client";
 import { useMonth } from "@/lib/month";
 import { addMonths, formatMonth } from "@/lib/format";
@@ -18,6 +20,8 @@ const NAV = [
   { href: "/impostazioni", label: "Impostazioni" },
 ];
 
+// La chiave resta quella di prima del nome nuovo: cambiarla farebbe
+// ripartire tutti dal tema di sistema, buttando via la scelta gia' fatta.
 const THEME_KEY = "gestione-risparmio:theme";
 
 function ThemeToggle() {
@@ -74,6 +78,31 @@ function SaveIndicator() {
         {meta.icon}
       </span>
       {meta.label}
+    </span>
+  );
+}
+
+/**
+ * Chi e' entrato, in alto a destra. Sotto sm resta il solo cerchietto con le
+ * iniziali: l'intestazione ha gia' mese, stato del salvataggio e tema, e il
+ * nome per esteso la manderebbe a capo. Il nome resta comunque leggibile ai
+ * lettori di schermo grazie alla copia sr-only, che esiste solo quando l'altra
+ * e' nascosta: le due non si sovrappongono mai.
+ */
+function AccountChip() {
+  const { account } = useAccount();
+  const nome = nomeCompleto(account);
+
+  return (
+    <span className="flex items-center gap-2" title={account.email}>
+      <span
+        aria-hidden
+        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] font-semibold tracking-wide text-page"
+      >
+        {iniziali(account)}
+      </span>
+      <span className="hidden max-w-[10rem] truncate text-sm text-ink sm:inline">{nome}</span>
+      <span className="sr-only sm:hidden">{nome}</span>
     </span>
   );
 }
@@ -166,7 +195,8 @@ function MonthNav() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { ready, loadError, saveStatus, saveError, account, reload, retrySave } = useStore();
+  const { ready, loadError, saveStatus, saveError, reload, retrySave } = useStore();
+  const { account } = useAccount();
   const pathname = usePathname();
   const [ricarico, setRicarico] = useState(false);
 
@@ -180,12 +210,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-7">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-base font-semibold tracking-tight text-ink">Gestione risparmio</h1>
+          <h1 className="text-base font-semibold tracking-tight text-ink">mymoney</h1>
           <MonthNav />
         </div>
         <div className="flex items-center gap-3">
           <SaveIndicator />
           <ThemeToggle />
+          <AccountChip />
           <LogoutButton />
         </div>
       </header>
@@ -246,13 +277,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="border-t border-hairline pt-3 text-[11px] text-ink-muted">
-        {account ? (
-          <>
-            Dati salvati sul tuo account <code className="break-all">{account}</code>
-          </>
-        ) : (
-          "Dati salvati sul tuo account."
-        )}
+        Dati salvati sul tuo account{" "}
+        <code className="break-all">{account.email || "in corso di verifica"}</code>
       </footer>
     </div>
   );

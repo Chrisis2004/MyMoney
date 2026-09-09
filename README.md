@@ -1,4 +1,4 @@
-# Gestione risparmio
+# mymoney
 
 App Next.js che rifà quello che faceva il foglio Numbers *Budget mensile — Settembre 2026*,
 ma su più mesi: transazioni, budget per categoria, spese fisse ricorrenti e andamento del
@@ -46,7 +46,8 @@ bun install
 bun run dev      # http://localhost:3000
 ```
 
-La prima volta vai su `/registrazione` e crea il tuo account.
+La prima volta vai su `/registrazione` e crea il tuo account: nome, cognome, email e
+password.
 
 Build di produzione:
 
@@ -86,6 +87,13 @@ Su Supabase, una tabella per concetto, ogni riga intestata a un utente:
 | `budgets` | Il budget di una categoria in un mese preciso. Una riga per coppia mese+categoria. |
 | `incomes` | L'entrata fissa di un mese. Manca il mese: vale `settings.default_income`. |
 | `extra_incomes` | Le entrate occasionali con una data. |
+
+Nome e cognome non hanno una tabella: stanno nei metadati dell'utente Supabase
+(`auth.users.raw_user_meta_data`, letti da `lib/account.ts`). Sono dati dell'identità, non
+dell'app, arrivano già dentro la sessione verificata — quindi il nome in alto a destra c'è
+al primo paint, senza una lettura in più a ogni pagina — e restano attaccati all'account
+anche se un giorno i dati venissero azzerati. Si modificano da *Impostazioni → Account*, che
+scrive con `supabase.auth.updateUser`.
 
 Gli id restano testuali e generati dal client (`groceries`, `tx-a1b2`) e la chiave primaria
 è composta `(user_id, id)`: due account possono avere la stessa categoria `groceries` senza
@@ -156,6 +164,7 @@ Ogni cosa che fa aspettare lo dice, con la forma adatta alla sua durata:
 | Accesso, registrazione, uscita | Cerchietto dentro il pulsante e testo che cambia (*Accedo…*). Il pulsante **resta** in attesa dopo che le credenziali sono passate, perché la pagina di destinazione deve ancora arrivare: spegnerlo lì farebbe sembrare il clic andato perso. |
 | Riepilogo Word | *Preparo il documento…*. Il `.docx` si chiede con `fetch` e non con un link diretto, così l'attesa è visibile e un errore del server diventa un messaggio invece di un file JSON scaricato. |
 | Salvataggio | L'indicatore in alto a destra: *Salvo… / Salvato / Non salvato*. |
+| Nome dell'account | Cerchietto nel pulsante *Salva* di Impostazioni, con l'esito scritto sotto. |
 
 In produzione le pagine vengono prefetchate, quindi tra una pagina e l'altra l'indicatore
 compare solo quando c'è davvero da aspettare — rete lenta, cache fredda, primo ingresso.
@@ -165,7 +174,10 @@ opacità, che dice "sto lavorando" senza movimento.
 
 ### Accesso
 
-Registrazione e accesso con email e password (`/registrazione`, `/accedi`). Il
+Registrazione e accesso con email e password (`/registrazione`, `/accedi`); alla
+registrazione si danno anche nome e cognome, che compaiono poi in alto a destra accanto al
+cerchietto con le iniziali. Sotto `sm` resta il solo cerchietto — l'intestazione ha già mese,
+stato del salvataggio e tema — ma il nome per esteso resta leggibile ai lettori di schermo. Il
 `middleware.ts` gira prima di ogni richiesta: rinnova il token scaduto e sbarra la strada a
 chi non ha una sessione — redirect alle pagine, 401 alle chiamate API. Il layout del gruppo
 `(app)` ripete il controllo sul server, perché è lui a decidere cosa viene renderizzato.
@@ -179,7 +191,7 @@ chi non ha una sessione — redirect alle pagine, 401 alle chiamate API. Il layo
 | **Budget** | Il piano del mese, con *Copia dal mese precedente* e *Allinea alle spese fisse*. Qui si registrano anche le entrate extra. |
 | **Spese fisse** | Affitto, bollette, abbonamenti. Il pulsante *Genera* crea in un colpo solo le transazioni del mese, senza duplicare quelle già registrate. |
 | **Andamento** | Giorno per giorno del mese selezionato, poi entrate vs uscite mese per mese, con tabella. |
-| **Impostazioni** | Categorie, entrate predefinite, percorso del file dati, backup, import/export, azzeramento. |
+| **Impostazioni** | Categorie, entrate predefinite, account (nome, cognome, email), backup, import/export, azzeramento. |
 
 Il mese si sceglie con le frecce in alto ed è condiviso da tutte le pagine.
 
@@ -274,6 +286,8 @@ lib/report.ts     costruzione del documento Word
 components/       AppShell, modulo di accesso, primitivi UI, grafici, tabelle
 lib/normalize.ts  validazione dei dati in ingresso (client e server)
 lib/store.tsx     stato dell'app e salvataggio automatico
+lib/account.ts    tipo Account e lettura di nome/cognome dai metadati Supabase
+lib/session.tsx   chi ha fatto l'accesso, disponibile alle pagine dal primo paint
 lib/calc.ts       calcoli derivati; lib/format.ts formattazione it-IT
 ```
 

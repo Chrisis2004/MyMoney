@@ -37,7 +37,7 @@ const TESTI = {
   },
   registrazione: {
     titolo: "Crea un account",
-    sottotitolo: "Bastano un indirizzo email e una password.",
+    sottotitolo: "Come ti chiami, la tua email e una password.",
     azione: "Registrati",
     inCorso: "Creo l'account…",
     altroLink: "/accedi",
@@ -53,6 +53,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   // Dove si voleva andare prima di essere rimbalzati all'accesso.
   const destinazione = params.get("vai") ?? "/";
 
+  const [nome, setNome] = useState("");
+  const [cognome, setCognome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,7 +75,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
         const { error } = await supabase.auth.signInWithPassword(credenziali);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.auth.signUp(credenziali);
+        // Nome e cognome finiscono nei metadati dell'utente: si scrivono una
+        // volta sola, alla registrazione, e sono modificabili da Impostazioni.
+        const { data, error } = await supabase.auth.signUp({
+          ...credenziali,
+          options: { data: { nome: nome.trim(), cognome: cognome.trim() } },
+        });
         if (error) throw error;
         // Con la conferma via email attiva Supabase non apre la sessione:
         // inutile mandare avanti, l'app rimbalzerebbe qui.
@@ -125,6 +132,31 @@ export function AuthForm({ mode }: { mode: Mode }) {
       <p className="mt-1 text-xs text-ink-secondary">{t.sottotitolo}</p>
 
       <div className="mt-5 space-y-3">
+        {mode === "registrazione" && (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nome">
+              <Input
+                name="nome"
+                autoComplete="given-name"
+                required
+                disabled={busy}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+              />
+            </Field>
+            <Field label="Cognome">
+              <Input
+                name="cognome"
+                autoComplete="family-name"
+                required
+                disabled={busy}
+                value={cognome}
+                onChange={(e) => setCognome(e.target.value)}
+              />
+            </Field>
+          </div>
+        )}
+
         <Field label="Email">
           <Input
             type="email"
