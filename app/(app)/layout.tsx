@@ -5,6 +5,7 @@ import { SessionProvider } from "@/lib/session";
 import { accountFrom } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { currentUser } from "@/lib/supabase/server";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 /**
  * Tutte le pagine dell'app vivono qui dentro, e qui dentro si entra solo con
@@ -22,6 +23,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <AppShell>{children}</AppShell>
         </MonthProvider>
       </StoreProvider>
+      <SpeedInsights />
     </SessionProvider>
+    
   );
 }
