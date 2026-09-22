@@ -109,7 +109,6 @@ function fixedExpenses(raw: unknown, validCategory: (id: string) => boolean): Fi
       name,
       categoryId,
       amount,
-      active: item.active !== false,
       ...(str(item.note) ? { note: str(item.note) } : {}),
     });
   }

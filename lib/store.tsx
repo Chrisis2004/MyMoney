@@ -12,8 +12,8 @@ import {
 import type { AppData, Category, ExtraIncome, FixedExpense, Transaction } from "./types";
 import { seedData } from "./seed";
 import { normalizeAppData, clone } from "./normalize";
-import { makeId } from "./calc";
-import { dayInMonth, monthOf } from "./format";
+import { fixedExpensePaid, makeId, remainingOf } from "./calc";
+import { dayInMonth, monthOf, todayIso } from "./format";
 
 const API = "/api/dati";
 /** Attesa prima di scrivere: raggruppa le modifiche rapide in un solo salvataggio. */
@@ -59,11 +59,32 @@ type Store = {
   addFixedExpense: (fx: Omit<FixedExpense, "id">) => void;
   updateFixedExpense: (id: string, patch: Partial<Omit<FixedExpense, "id">>) => void;
   removeFixedExpense: (id: string) => void;
-  generateFixedExpenses: (month: string, day: number) => number;
+  /** Registra quello che manca di una spesa fissa nel mese; false se e' coperta. */
+  generateFixedExpense: (id: string, month: string) => boolean;
+  /** Registra quello che manca di tutte le spese fisse del mese. */
+  generateFixedExpenses: (month: string) => number;
 
   replaceAll: (data: AppData) => void;
   clearAll: () => void;
 };
+
+/**
+ * La transazione che chiude una spesa fissa: importa solo quello che manca,
+ * cosi' una spesa pagata in parte si completa senza contarla due volte. Il
+ * giorno non si sceglie: oggi se il mese e' quello corrente, altrimenti il
+ * primo del mese.
+ */
+function fixedExpenseTx(fx: FixedExpense, month: string, amount: number): Transaction {
+  return {
+    id: makeId("tx"),
+    date: monthOf(todayIso()) === month ? todayIso() : dayInMonth(month, 1),
+    description: fx.name,
+    categoryId: fx.categoryId,
+    amount,
+    note: fx.note,
+    fixedExpenseId: fx.id,
+  };
+}
 
 const StoreContext = createContext<Store | null>(null);
 
@@ -230,7 +251,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         update((d) => {
           const totals = new Map<string, number>();
           for (const fx of d.fixedExpenses) {
-            if (!fx.active) continue;
             totals.set(fx.categoryId, (totals.get(fx.categoryId) ?? 0) + fx.amount);
           }
           let next = d;
@@ -320,28 +340,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       removeFixedExpense: (id) =>
         update((d) => ({ ...d, fixedExpenses: d.fixedExpenses.filter((f) => f.id !== id) })),
 
-      generateFixedExpenses: (month, day) => {
-        const already = new Set(
-          data.transactions
-            .filter((t) => t.fixedExpenseId && monthOf(t.date) === month)
-            .map((t) => t.fixedExpenseId as string),
-        );
-        const toCreate = data.fixedExpenses.filter((f) => f.active && !already.has(f.id));
+      generateFixedExpense: (id, month) => {
+        const fx = data.fixedExpenses.find((f) => f.id === id);
+        if (!fx) return false;
+        const missing = remainingOf(fx, fixedExpensePaid(data, month));
+        if (missing === 0) return false;
+        update((d) => ({
+          ...d,
+          transactions: [...d.transactions, fixedExpenseTx(fx, month, missing)],
+        }));
+        return true;
+      },
+
+      generateFixedExpenses: (month) => {
+        const paid = fixedExpensePaid(data, month);
+        const toCreate = data.fixedExpenses
+          .map((f) => ({ fx: f, missing: remainingOf(f, paid) }))
+          .filter((r) => r.missing > 0);
         if (toCreate.length) {
-          const date = dayInMonth(month, day);
           update((d) => ({
             ...d,
             transactions: [
               ...d.transactions,
-              ...toCreate.map((f) => ({
-                id: makeId("tx"),
-                date,
-                description: f.name,
-                categoryId: f.categoryId,
-                amount: f.amount,
-                note: f.note,
-                fixedExpenseId: f.id,
-              })),
+              ...toCreate.map((r) => fixedExpenseTx(r.fx, month, r.missing)),
             ],
           }));
         }

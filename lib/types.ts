@@ -41,7 +41,6 @@ export type FixedExpense = {
   name: string;
   categoryId: string;
   amount: number;
-  active: boolean;
   note?: string;
 };
 

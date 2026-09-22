@@ -1,4 +1,11 @@
-import type { AppData, Category, CategorySummaryRow, ExtraIncome, Transaction } from "./types";
+import type {
+  AppData,
+  Category,
+  CategorySummaryRow,
+  ExtraIncome,
+  FixedExpense,
+  Transaction,
+} from "./types";
 import { monthOf } from "./format";
 
 export function activeCategories(data: AppData): Category[] {
@@ -13,6 +20,25 @@ export function transactionsOfMonth(data: AppData, month: string): Transaction[]
   return data.transactions
     .filter((t) => monthOf(t.date) === month)
     .sort((a, b) => (a.date === b.date ? a.id.localeCompare(b.id) : b.date.localeCompare(a.date)));
+}
+
+/**
+ * Quanto di ogni spesa fissa risulta gia' registrato nel mese, per id. Le
+ * transazioni collegate si sommano: una spesa puo' essere coperta a rate, o in
+ * parte, e quello che conta e' il totale.
+ */
+export function fixedExpensePaid(data: AppData, month: string): Map<string, number> {
+  const paid = new Map<string, number>();
+  for (const t of data.transactions) {
+    if (!t.fixedExpenseId || monthOf(t.date) !== month) continue;
+    paid.set(t.fixedExpenseId, (paid.get(t.fixedExpenseId) ?? 0) + t.amount);
+  }
+  return paid;
+}
+
+/** Quanto resta da contabilizzare di una spesa fissa: 0 se e' coperta. */
+export function remainingOf(fx: FixedExpense, paid: Map<string, number>): number {
+  return Math.max(0, Math.round((fx.amount - (paid.get(fx.id) ?? 0)) * 100) / 100);
 }
 
 /** Separa i movimenti che entrano nel budget da quelli tenuti fuori. */

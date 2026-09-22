@@ -304,7 +304,7 @@ export default function TransactionsPage() {
           <Button
             size="sm"
             onClick={() => {
-              const created = generateFixedExpenses(month, 1);
+              const created = generateFixedExpenses(month);
               setNotice(
                 created
                   ? `Create ${created} transazioni dalle spese fisse.`

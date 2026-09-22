@@ -68,7 +68,6 @@ export async function loadAppData(supabase: SupabaseClient, userId: string): Pro
       name: f.name,
       categoryId: f.category_id,
       amount: Number(f.amount),
-      active: f.active !== false,
       ...(f.note ? { note: f.note } : {}),
     })),
     transactions: txs.map((t) => ({
@@ -126,7 +125,6 @@ const asFixedExpense: Mapper<AppData["fixedExpenses"][number]> = {
     name: f.name,
     category_id: f.categoryId,
     amount: money(f.amount),
-    active: f.active,
     note: orNull(f.note),
   }),
 };
